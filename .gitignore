@@ -1,0 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary uploads
+temp_upload.txt
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
