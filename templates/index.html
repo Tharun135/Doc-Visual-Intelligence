@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Visual Advisor</title>
+
+<style>
+
+body{
+    font-family:Arial;
+    margin:40px;
+}
+
+.card{
+    border:1px solid #ccc;
+    padding:20px;
+    margin-bottom:20px;
+    border-radius:10px;
+}
+
+.confidence{
+    color:green;
+    font-weight:bold;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Visual Advisor</h1>
+
+<form method="POST" enctype="multipart/form-data">
+
+    <input
+        type="file"
+        name="document"
+        required>
+
+    <button type="submit">
+        Analyze
+    </button>
+
+</form>
+
+<hr>
+
+
+{% for result in results %}
+
+<div class="card">
+
+    <h2>
+        {{ result.title }}
+    </h2>
+
+    {% for suggestion in result.suggestions %}
+
+        <h3>
+            {{ suggestion.visual_type }}
+        </h3>
+
+        <p>
+            {{ suggestion.reason }}
+        </p>
+
+        <p class="confidence">
+            Confidence: {{ suggestion.confidence }}%
+        </p>
+
+        <b>Evidence:</b>
+
+        <ul>
+
+        {% for item in suggestion.evidence %}
+
+            <li>{{ item }}</li>
+
+        {% endfor %}
+
+        </ul>
+
+    {% endfor %}
+
+</div>
+
+{% endfor %}
+
+</body>
+</html>
