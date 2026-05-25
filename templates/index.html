@@ -1,92 +1,525 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-
-<title>Visual Advisor</title>
-
-<style>
-
-body{
-    font-family:Arial;
-    margin:40px;
-}
-
-.card{
-    border:1px solid #ccc;
-    padding:20px;
-    margin-bottom:20px;
-    border-radius:10px;
-}
-
-.confidence{
-    color:green;
-    font-weight:bold;
-}
-
-</style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Advisor - Scan Documentation Visual Opportunities</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body>
 
-<h1>Visual Advisor</h1>
+    <!-- Header Panel -->
+    <header>
+        <div class="header-container">
+            <a href="/" class="logo">
+                <div class="logo-icon-container">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 12a10 10 0 0 1 13-9"></path>
+                        <path d="M12 2a10 10 0 0 1 9 13"></path>
+                        <path d="M22 12a10 10 0 0 1-13 9"></path>
+                        <path d="M12 22a10 10 0 0 1-9-13"></path>
+                        <path d="m16 12-4-4-4 4"></path>
+                        <path d="M12 8v8"></path>
+                    </svg>
+                    <div class="logo-radar"></div>
+                </div>
+                <span>Visual Advisor</span>
+            </a>
+            <div class="overview-banner">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>AI Documentation Scan Engine v1.2</span>
+            </div>
+        </div>
+    </header>
 
-<form method="POST" enctype="multipart/form-data">
+    <!-- Main Workspace -->
+    <main>
+        
+        <!-- Left Column: Input Form -->
+        <section class="panel">
+            <h2 class="panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Document Input Source
+            </h2>
 
-    <input
-        type="file"
-        name="document"
-        required>
+            <form method="POST" enctype="multipart/form-data">
+                <!-- Input Mode Tabs -->
+                <div class="tab-container">
+                    <button type="button" class="tab-btn active" data-tab="text">Pasted Text</button>
+                    <button type="button" class="tab-btn" data-tab="upload">File Upload</button>
+                </div>
 
-    <button type="submit">
-        Analyze
-    </button>
+                <!-- Pasted Text Editor Panel -->
+                <div class="tab-panel active" id="text-panel">
+                    <div class="textarea-wrapper">
+                        <textarea class="editor" name="pasted_text" placeholder="Type, paste, or load sample documentation text here to inspect..." required>{{ original_text if input_source == 'text' else '' }}</textarea>
+                    </div>
+                </div>
 
-</form>
+                <!-- File Upload Drag Zone Panel -->
+                <div class="tab-panel" id="upload-panel">
+                    <div class="upload-zone">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p class="upload-text">Drag and drop file here</p>
+                        <p class="upload-subtext">Supports .md, .txt, .json files (max 10MB)</p>
+                        <input type="file" name="document" class="file-input" accept=".txt,.md,.json">
+                    </div>
+                    
+                    <!-- Selected File Banner -->
+                    <div class="selected-file-banner">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <span class="selected-file-name">document.md</span>
+                        <button type="button" class="remove-file-btn" title="Remove file">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
 
-<hr>
+                <!-- Sample Presets Grid -->
+                <h3 class="samples-title">Load Sample Templates</h3>
+                <div class="samples-grid">
+                    <button type="button" class="sample-btn" data-sample="workflow">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        <span>Sync Sync Procedure</span>
+                    </button>
+                    <button type="button" class="sample-btn" data-sample="architecture">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                        <span>System Architecture</span>
+                    </button>
+                    <button type="button" class="sample-btn" data-sample="decision">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"></path><path d="M20 7H4a2 2 0 0 0-2 2v10"></path></svg>
+                        <span>Troubleshoot Valve Logic</span>
+                    </button>
+                    <button type="button" class="sample-btn" data-sample="summary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <span>Industrial Gateway Info</span>
+                    </button>
+                </div>
 
+                <!-- Submit Button -->
+                <button type="submit" class="btn-submit">
+                    <span class="spinner"></span>
+                    <span class="btn-text">Analyze Visual Opportunities</span>
+                    <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px; height:18px;">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 5"></polyline>
+                    </svg>
+                </button>
+            </form>
+        </section>
 
-{% for result in results %}
+        <!-- Right Column: Results Panel -->
+        <section class="panel" style="min-height: 520px;">
+            
+            {% if not results %}
+                <!-- Empty Placeholder State -->
+                <div class="empty-state">
+                    <div class="radar-container">
+                        <div class="radar-circle"></div>
+                        <div class="radar-circle"></div>
+                        <div class="radar-circle"></div>
+                        <div class="radar-scanner"></div>
+                        <div class="radar-center"></div>
+                    </div>
+                    <h3>Engine Standby</h3>
+                    <p>Load a template or upload a setup document, then run the scan to identify visual document enhancements.</p>
+                </div>
+            {% else %}
+                <!-- Results Content -->
+                <div class="results-container">
+                    
+                    <!-- Overview Summary Block -->
+                    {% set section_count = results|length %}
+                    {% set ns = namespace(reco_count=0) %}
+                    {% for result in results %}
+                        {% for suggestion in result.suggestions %}
+                            {% if suggestion.visual_type != "No recommendation" %}
+                                {% set ns.reco_count = ns.reco_count + 1 %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
 
-<div class="card">
+                    <div class="overview-card">
+                        <div class="overview-stats">
+                            <div class="stat-item">
+                                <span class="stat-val primary-glow">{{ section_count }}</span>
+                                <span class="stat-label">Sections Scanned</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-val emerald-glow">{{ ns.reco_count }}</span>
+                                <span class="stat-label">Visual Aids Advised</span>
+                            </div>
+                        </div>
+                        
+                        <div class="overview-banner">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                            <span>Ready to optimize readability</span>
+                        </div>
+                    </div>
 
-    <h2>
-        {{ result.title }}
-    </h2>
+                    <!-- Two-Column Results Explorer Dashboard -->
+                    <div class="dashboard-grid">
+                        
+                        <!-- Left pane: Section Cards List -->
+                        <div class="section-list">
+                            {% for result in results %}
+                                {% set has_rec = result.suggestions[0].visual_type != "No recommendation" if result.suggestions else false %}
+                                <button type="button" class="section-item-card" data-index="{{ loop.index0 }}">
+                                    <div class="section-item-header">
+                                        <h4 class="section-item-title">{{ result.title }}</h4>
+                                        <div class="section-badge-container">
+                                            {% if has_rec %}
+                                                <span class="section-item-badge has-visual">{{ result.suggestions[0].visual_type }}</span>
+                                            {% else %}
+                                                <span class="section-item-badge no-visual">Text Only</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <p class="section-item-snippet">{{ result.content }}</p>
+                                </button>
+                            {% endfor %}
+                        </div>
 
-    {% for suggestion in result.suggestions %}
+                        <!-- Right pane: Suggestion Detail Container -->
+                        <div class="detail-container">
+                            {% for result in results %}
+                                <div class="detail-panel" id="detail-{{ loop.index0 }}">
+                                    <div class="detail-header">
+                                        <h3 class="detail-title">{{ result.title }}</h3>
+                                    </div>
+                                    
+                                    <!-- Highlightable Source Code Box -->
+                                    <div class="section-content-box">{{ result.content }}</div>
 
-        <h3>
-            {{ suggestion.visual_type }}
-        </h3>
+                                    <!-- Recommendations Cards List -->
+                                    <div class="reco-list">
+                                        {% for suggestion in result.suggestions %}
+                                            <div class="reco-card">
+                                                <div class="reco-card-header">
+                                                    <div class="reco-type-container">
+                                                        <div class="reco-icon-wrapper {% if suggestion.visual_type == 'Flowchart' %}reco-flowchart{% elif suggestion.visual_type == 'Screenshot' %}reco-screenshot{% elif suggestion.visual_type == 'Architecture Diagram' %}reco-architecture{% elif suggestion.visual_type == 'Decision Tree' %}reco-decision{% elif suggestion.visual_type == 'Illustration' %}reco-illustration{% elif suggestion.visual_type == 'Workflow Diagram' %}reco-workflow{% elif suggestion.visual_type == 'Code Example' %}reco-code{% elif suggestion.visual_type == 'Visual Summary' %}reco-summary{% elif suggestion.visual_type == 'GIF Tutorial' %}reco-gif{% else %}reco-none{% endif %}">
+                                                            {% if suggestion.visual_type == 'Flowchart' %}
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                                                            {% elif suggestion.visual_type == 'Screenshot' %}
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                                                            {% elif suggestion.visual_type == 'Architecture Diagram' %}
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                                            {% elif suggestion.visual_type == 'Decision Tree' %}
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.5" y1="10.5" x2="15.5" y2="6.5"></line><line x1="8.5" y1="13.5" x2="15.5" y2="17.5"></line></svg>
+                                                            {% elif suggestion.visual_type == 'Illustration' %}
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                                                            {% elif suggestion.visual_type == 'Workflow Diagram' %}
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+                                                            {% elif suggestion.visual_type == 'Code Example' %}
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                                                            {% elif suggestion.visual_type == 'Visual Summary' %}
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                                                            {% elif suggestion.visual_type == 'GIF Tutorial' %}
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+                                                            {% else %}
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                                            {% endif %}
+                                                        </div>
+                                                        <span class="reco-type-text">{{ suggestion.visual_type }}</span>
+                                                    </div>
+                                                    
+                                                    <!-- Confidence pill -->
+                                                    <div class="reco-confidence-pill">
+                                                        <span class="confidence-dot {% if suggestion.confidence >= 75 %}confidence-high{% elif suggestion.confidence >= 40 %}confidence-medium{% else %}confidence-low{% endif %}"></span>
+                                                        <span>Confidence: {{ suggestion.confidence }}%</span>
+                                                    </div>
+                                                </div>
 
-        <p>
-            {{ suggestion.reason }}
-        </p>
+                                                <p class="reco-reason">{{ suggestion.reason }}</p>
 
-        <p class="confidence">
-            Confidence: {{ suggestion.confidence }}%
-        </p>
+                                                {% if suggestion.evidence %}
+                                                    <div class="reco-evidence">
+                                                        <span class="evidence-title">Detection Evidence:</span>
+                                                        {% for item in suggestion.evidence %}
+                                                            <span class="evidence-pill">{{ item }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
 
-        <b>Evidence:</b>
+                                                <!-- ==========================================
+                                                     INTERACTIVE SIMULATED MOCKUPS
+                                                     ========================================== -->
+                                                {% if suggestion.visual_type == "Flowchart" %}
+                                                    <div class="simulator-box">
+                                                        <div class="sim-label">
+                                                            <span>Flowchart Simulator</span>
+                                                            <span class="status">Live Flow</span>
+                                                        </div>
+                                                        <div class="flowchart-sim">
+                                                            <div class="flow-node start">Start Node</div>
+                                                            <div class="glowing-connector"></div>
+                                                            <div class="flow-node">Execute Action</div>
+                                                            <div class="glowing-connector"></div>
+                                                            <div class="flow-node decision"><span>Condition check?</span></div>
+                                                            <div class="flow-branch-row">
+                                                                <div class="flow-branch">
+                                                                    <span class="branch-label">Yes</span>
+                                                                    <div class="glowing-connector emerald"></div>
+                                                                    <div class="flow-node success" style="border-color: var(--accent-emerald);">System Success</div>
+                                                                </div>
+                                                                <div class="flow-branch">
+                                                                    <span class="branch-label">No</span>
+                                                                    <div class="glowing-connector rose"></div>
+                                                                    <div class="flow-node error" style="border-color: var(--accent-rose);">Retry Steps</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% elif suggestion.visual_type == "Screenshot" %}
+                                                    <div class="simulator-box">
+                                                        <div class="sim-label">
+                                                            <span>Screenshot Camera Highlight</span>
+                                                            <span class="status">Camera Range</span>
+                                                        </div>
+                                                        <div class="screenshot-sim">
+                                                            <div class="browser-header">
+                                                                <div class="browser-dots">
+                                                                    <div class="browser-dot red"></div>
+                                                                    <div class="browser-dot yellow"></div>
+                                                                    <div class="browser-dot green"></div>
+                                                                </div>
+                                                                <div class="browser-url">siemens-hmi-admin.local/config</div>
+                                                            </div>
+                                                            <div class="browser-body">
+                                                                <div class="mock-sidebar">
+                                                                    <div class="sidebar-line"></div>
+                                                                    <div class="sidebar-line"></div>
+                                                                    <div class="sidebar-line"></div>
+                                                                </div>
+                                                                <div class="mock-content">
+                                                                    <div class="mock-input-row">
+                                                                        <div class="mock-label"></div>
+                                                                        <div class="mock-input-box"></div>
+                                                                    </div>
+                                                                    <div class="mock-btn-row">
+                                                                        <div class="mock-action-btn"></div>
+                                                                        <div class="mock-action-btn secondary"></div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="target-pulsing-box">
+                                                                    <div class="corner-marker top-left"></div>
+                                                                    <div class="corner-marker top-right"></div>
+                                                                    <div class="corner-marker bottom-left"></div>
+                                                                    <div class="corner-marker bottom-right"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% elif suggestion.visual_type == "GIF Tutorial" %}
+                                                    <div class="simulator-box">
+                                                        <div class="sim-label">
+                                                            <span>Interactive GIF Player</span>
+                                                            <span class="status status-step">Frame 1/3</span>
+                                                        </div>
+                                                        <div class="gif-sim-timeline">
+                                                            <div class="timeline-frames">
+                                                                <div class="frame-card active">
+                                                                    <span class="frame-num">Frame 1</span>
+                                                                    <div class="frame-visual">
+                                                                        <svg class="cursor-sim" viewBox="0 0 24 24" style="width:12px; height:12px;"><path fill="currentColor" d="M13.64,21.97C12.9,22.4 12,22 12,21.13V13.5H3.61C2.75,13.5 2.3,12.6 2.93,12L19.93,2C20.57,1.4 21.5,2 21.5,2.87V10.5H20.39C19.78,10.5 19.34,11.07 19.5,11.66L20.91,16.89C21.12,17.67 20.48,18.5 19.64,18.5H16.36L13.64,21.97Z" /></svg>
+                                                                        <span>Click Config</span>
+                                                                    </div>
+                                                                    <span class="frame-desc">Go to System</span>
+                                                                </div>
+                                                                <div class="frame-card">
+                                                                    <span class="frame-num">Frame 2</span>
+                                                                    <div class="frame-visual">
+                                                                        <svg class="cursor-sim" viewBox="0 0 24 24" style="width:12px; height:12px;"><path fill="currentColor" d="M13.64,21.97C12.9,22.4 12,22 12,21.13V13.5H3.61C2.75,13.5 2.3,12.6 2.93,12L19.93,2C20.57,1.4 21.5,2 21.5,2.87V10.5H20.39C19.78,10.5 19.34,11.07 19.5,11.66L20.91,16.89C21.12,17.67 20.48,18.5 19.64,18.5H16.36L13.64,21.97Z" /></svg>
+                                                                        <span>Type Value</span>
+                                                                    </div>
+                                                                    <span class="frame-desc">Enter details</span>
+                                                                </div>
+                                                                <div class="frame-card">
+                                                                    <span class="frame-num">Frame 3</span>
+                                                                    <div class="frame-visual">
+                                                                        <svg class="cursor-sim" viewBox="0 0 24 24" style="width:12px; height:12px;"><path fill="currentColor" d="M13.64,21.97C12.9,22.4 12,22 12,21.13V13.5H3.61C2.75,13.5 2.3,12.6 2.93,12L19.93,2C20.57,1.4 21.5,2 21.5,2.87V10.5H20.39C19.78,10.5 19.34,11.07 19.5,11.66L20.91,16.89C21.12,17.67 20.48,18.5 19.64,18.5H16.36L13.64,21.97Z" /></svg>
+                                                                        <span>Press Apply</span>
+                                                                    </div>
+                                                                    <span class="frame-desc">Submit form</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="gif-timeline-bar">
+                                                                <div class="gif-timeline-progress"></div>
+                                                            </div>
+                                                            <div class="gif-status-pill">SCREEN RECORDING</div>
+                                                        </div>
+                                                    </div>
+                                                {% elif suggestion.visual_type == "Architecture Diagram" %}
+                                                    <div class="simulator-box">
+                                                        <div class="sim-label">
+                                                            <span>System Architecture Nodes</span>
+                                                            <span class="status">Data Connected</span>
+                                                        </div>
+                                                        <div class="arch-sim">
+                                                            <svg class="arch-connections">
+                                                                <line x1="170" y1="30" x2="170" y2="100" class="active"></line>
+                                                                <line x1="170" y1="100" x2="60" y2="100" class="active"></line>
+                                                                <line x1="170" y1="100" x2="270" y2="100" class="active"></line>
+                                                            </svg>
+                                                            <div class="arch-node node-server">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                                                                <span>Cloud Server</span>
+                                                            </div>
+                                                            <div class="arch-node node-gateway">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+                                                                <span>Gateway</span>
+                                                            </div>
+                                                            <div class="arch-node node-hmi">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                                                <span>HMI Panel</span>
+                                                            </div>
+                                                            <div class="arch-node node-plc">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+                                                                <span>Core PLC</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% elif suggestion.visual_type == "Decision Tree" %}
+                                                    <div class="simulator-box">
+                                                        <div class="sim-label">
+                                                            <span>Decision Logic Tree</span>
+                                                            <span class="status">Traversing</span>
+                                                        </div>
+                                                        <div class="decision-sim">
+                                                            <svg class="arch-connections">
+                                                                <line x1="170" y1="25" x2="70" y2="85" class="active"></line>
+                                                                <line x1="170" y1="25" x2="260" y2="85" class="active"></line>
+                                                                <line x1="70" y1="85" x2="35" y2="130"></line>
+                                                                <line x1="70" y1="85" x2="110" y2="130"></line>
+                                                            </svg>
+                                                            <div class="tree-node tree-root">Condition?</div>
+                                                            <div class="tree-node tree-yes">Yes (True)</div>
+                                                            <div class="tree-node tree-no">No (False)</div>
+                                                            <div class="tree-node tree-leaf-1">Action A</div>
+                                                            <div class="tree-node tree-leaf-2">Action B</div>
+                                                            <div class="tree-node tree-leaf-3">Skip</div>
+                                                        </div>
+                                                    </div>
+                                                {% elif suggestion.visual_type == "Illustration" %}
+                                                    <div class="simulator-box">
+                                                        <div class="sim-label">
+                                                            <span>Illustration Technical Sketch</span>
+                                                            <span class="status">Rendering Sketch</span>
+                                                        </div>
+                                                        <div class="illustration-sim">
+                                                            <div class="mock-device-drawing">
+                                                                <div class="mock-device-inner"></div>
+                                                            </div>
+                                                            <div class="illustration-arrow pos-1">↓</div>
+                                                            <div class="illustration-arrow pos-2">↓</div>
+                                                            <div class="illustration-label-callout pos-left">Cable mount</div>
+                                                            <div class="illustration-label-callout pos-right">Power socket</div>
+                                                        </div>
+                                                    </div>
+                                                {% elif suggestion.visual_type == "Workflow Diagram" %}
+                                                    <div class="simulator-box">
+                                                        <div class="sim-label">
+                                                            <span>Workflow Exchange Diagram</span>
+                                                            <span class="status">Exchanging</span>
+                                                        </div>
+                                                        <div class="workflow-sim">
+                                                            <div class="wf-node src">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                                                <span>Source File</span>
+                                                            </div>
+                                                            <div class="wf-transfer-path">
+                                                                <div class="wf-transfer-label">Transferring</div>
+                                                                <div class="wf-moving-packet"></div>
+                                                            </div>
+                                                            <div class="wf-node dest">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                                                                <span>Target Db</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% elif suggestion.visual_type == "Code Example" %}
+                                                    <div class="simulator-box">
+                                                        <div class="sim-label">
+                                                            <span>Code Block Highlight</span>
+                                                            <span class="status">JSON Format</span>
+                                                        </div>
+                                                        <div class="code-sim">
+                                                            {<br>
+                                                            &nbsp;&nbsp;<span class="code-property">"host"</span>: <span class="code-string">"127.0.0.1"</span>,<br>
+                                                            &nbsp;&nbsp;<span class="code-property">"port"</span>: <span class="code-number">5000</span>,<br>
+                                                            &nbsp;&nbsp;<span class="code-property">"ssl"</span>: <span class="code-keyword">true</span>,<br>
+                                                            &nbsp;&nbsp;<span class="code-property">"endpoints"</span>: [<span class="code-string">"/api/v1"</span>, <span class="code-string">"/health"</span>]<br>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                {% elif suggestion.visual_type == "Visual Summary" %}
+                                                    <div class="simulator-box">
+                                                        <div class="sim-label">
+                                                            <span>Visual Summary Infographic</span>
+                                                            <span class="status">Data Plot</span>
+                                                        </div>
+                                                        <div class="summary-sim">
+                                                            <div class="summary-mock-row">
+                                                                <div class="summary-mock-icon">1</div>
+                                                                <div class="summary-mock-bars">
+                                                                    <div class="summary-mock-bar-line filled w-80"></div>
+                                                                    <div class="summary-mock-bar-line"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="summary-mock-row">
+                                                                <div class="summary-mock-icon" style="background:var(--accent-violet-glow); color:var(--accent-violet);">2</div>
+                                                                <div class="summary-mock-bars">
+                                                                    <div class="summary-mock-bar-line filled w-60" style="background:linear-gradient(90deg, var(--accent-violet), var(--accent-rose))"></div>
+                                                                    <div class="summary-mock-bar-line"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="summary-mock-row">
+                                                                <div class="summary-mock-icon" style="background:var(--accent-amber-glow); color:var(--accent-amber);">3</div>
+                                                                <div class="summary-mock-bars">
+                                                                    <div class="summary-mock-bar-line filled w-45" style="background:linear-gradient(90deg, var(--accent-amber), var(--accent-rose))"></div>
+                                                                    <div class="summary-mock-bar-line"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
 
-        <ul>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
 
-        {% for item in suggestion.evidence %}
+                    </div>
+                </div>
+            {% endif %}
 
-            <li>{{ item }}</li>
+        </section>
 
-        {% endfor %}
+    </main>
 
-        </ul>
-
-    {% endfor %}
-
-</div>
-
-{% endfor %}
-
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

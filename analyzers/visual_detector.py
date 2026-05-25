@@ -385,129 +385,129 @@ def detect_visuals(title, content):
             })
 
     # ----------------------------------
-        # Remove duplicates
-        # ----------------------------------
+    # Remove duplicates
+    # ----------------------------------
 
-        unique_results = []
+    unique_results = []
 
-        seen = set()
+    seen = set()
 
-        for result in results:
+    for result in results:
 
-            visual_type = result["visual_type"]
+        visual_type = result["visual_type"]
 
-            if visual_type not in seen:
+        if visual_type not in seen:
 
-                seen.add(
-                    visual_type
-                )
+            seen.add(
+                visual_type
+            )
 
-                unique_results.append(
-                    result
-                )
+            unique_results.append(
+                result
+            )
 
 
-        # ----------------------------------
-        # Remove redundant recommendations
-        # ----------------------------------
+    # ----------------------------------
+    # Remove redundant recommendations
+    # ----------------------------------
 
-        visual_types = [
+    visual_types = [
 
-            r["visual_type"]
+        r["visual_type"]
 
-            for r in unique_results
+        for r in unique_results
+
+    ]
+
+
+    # GIF replaces flowchart
+    # for long interactive procedures
+
+    if (
+
+        "GIF Tutorial"
+
+        in visual_types
+
+        and
+
+        step_count >= 6
+
+    ):
+
+        unique_results = [
+
+            r for r in unique_results
+
+            if r["visual_type"]
+
+            != "Flowchart"
 
         ]
 
 
-        # GIF replaces flowchart
-        # for long interactive procedures
+    # Screenshot replaces flowchart
+    # for short UI workflows
 
-        if (
+    if (
 
-            "GIF Tutorial"
+        "Screenshot"
 
-            in visual_types
+        in visual_types
 
-            and
+        and
 
-            step_count >= 6
+        step_count <= 4
 
-        ):
+    ):
 
-            unique_results = [
+        unique_results = [
 
-                r for r in unique_results
+            r for r in unique_results
 
-                if r["visual_type"]
+            if r["visual_type"]
 
-                != "Flowchart"
+            != "Flowchart"
 
-            ]
-
-
-        # Screenshot replaces flowchart
-        # for short UI workflows
-
-        if (
-
-            "Screenshot"
-
-            in visual_types
-
-            and
-
-            step_count <= 4
-
-        ):
-
-            unique_results = [
-
-                r for r in unique_results
-
-                if r["visual_type"]
-
-                != "Flowchart"
-
-            ]
+        ]
 
 
-        # ----------------------------------
-        # Sort results
-        # ----------------------------------
+    # ----------------------------------
+    # Sort results
+    # ----------------------------------
 
-        unique_results = sorted(
+    unique_results = sorted(
 
-            unique_results,
+        unique_results,
 
-            key=lambda x: x["score"],
+        key=lambda x: x["score"],
 
-            reverse=True
+        reverse=True
 
-        )
-
-
-        # ----------------------------------
-        # Fallback
-        # ----------------------------------
-
-        if not unique_results:
-
-            unique_results.append({
-
-                "visual_type":
-                "No recommendation",
-
-                "reason":
-                "No strong visual opportunity detected",
-
-                "score":0,
-
-                "confidence":0,
-
-                "evidence":[]
-
-            })
+    )
 
 
-        return unique_results[:2]   
+    # ----------------------------------
+    # Fallback
+    # ----------------------------------
+
+    if not unique_results:
+
+        unique_results.append({
+
+            "visual_type":
+            "No recommendation",
+
+            "reason":
+            "No strong visual opportunity detected",
+
+            "score":0,
+
+            "confidence":0,
+
+            "evidence":[]
+
+        })
+
+
+    return unique_results[:2]   

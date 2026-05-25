@@ -9,22 +9,41 @@ app = Flask(__name__)
 def home():
 
     results = []
+    original_text = ""
+    input_source = "" # 'file' or 'text' or ''
 
     if request.method == "POST":
+        file = request.files.get("document")
+        pasted_text = request.form.get("pasted_text", "")
 
-        file = request.files["document"]
+        text = ""
+        filename = ""
+        if file and file.filename != "":
+            filename = file.filename
+            # Read file stream directly to avoid temp file pollution, fallback to saving if needed
+            try:
+                text = file.read().decode("utf-8")
+            except Exception:
+                # Fallback to local save if decode fail or stream issue
+                import os
+                temp_path = os.path.join(app.root_path, "temp_upload.txt")
+                file.save(temp_path)
+                text = extract_text(temp_path)
+                try:
+                    os.remove(temp_path)
+                except Exception:
+                    pass
+            input_source = "file"
+            original_text = text
+        elif pasted_text.strip():
+            text = pasted_text
+            input_source = "text"
+            original_text = text
 
-        if file:
-
-            filepath = file.filename
-            file.save(filepath)
-
-            text = extract_text(filepath)
-
+        if text:
             sections = split_sections(text)
 
             for section in sections:
-
                 suggestions = detect_visuals(
                     section["title"],
                     section["content"]
@@ -32,12 +51,15 @@ def home():
 
                 results.append({
                     "title": section["title"],
+                    "content": section["content"],
                     "suggestions": suggestions
                 })
 
     return render_template(
         "index.html",
-        results=results
+        results=results,
+        original_text=original_text,
+        input_source=input_source
     )
 
 
