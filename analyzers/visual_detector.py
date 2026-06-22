@@ -5,12 +5,34 @@ import re
 with open("rules/visual_rules.json", "r", encoding="utf-8") as file:
     rules = json.load(file)
 
+with open("rules/knowledge_model.json", "r", encoding="utf-8") as file:
+    knowledge_model = json.load(file)
+
 
 ACTION_VERBS = {
     "open", "click", "select", "choose", "validate", "start", "verify",
     "check", "configure", "deploy", "save", "run", "import", "export",
     "upload", "download", "add", "remove", "connect", "set", "enter"
 }
+
+CHECKPOINT_TERMS = {
+    "validate", "verify", "confirm", "review", "save", "apply", "test", "status"
+}
+
+SCREENSHOT_TYPES = {"Screenshot", "Configuration Screenshot"}
+DIAGRAM_TYPES = {
+    "Topology Diagram",
+    "Architecture Diagram",
+    "Data Flow Diagram",
+    "Workflow Diagram",
+    "Flowchart",
+    "Sequence Diagram",
+    "Decision Tree",
+    "Before/After Comparison",
+    "Mapping Table"
+}
+
+GIF_TYPES = {"GIF Tutorial"}
 
 
 def _count_pattern(content, pattern):
@@ -111,6 +133,172 @@ def _keyword_hits(content_lower, keyword):
     return len(re.findall(r"\b" + re.escape(keyword_lower) + r"\b", content_lower))
 
 
+def detect_existing_visual_assets(content):
+    markdown_images = _count_pattern(content, r"!\[[^\]]*\]\([^\)]+\)")
+    html_images = _count_pattern(content, r"<img\b")
+    screenshot_mentions = _count_pattern(content, r"\b(screenshot|screen capture|figure)\b")
+    diagram_mentions = _count_pattern(content, r"\b(diagram|topology|architecture|flowchart|sequence)\b")
+    gif_mentions = _count_pattern(content, r"\b(gif|animation|video demo)\b")
+
+    screenshot_count = markdown_images + html_images + screenshot_mentions
+    diagram_count = diagram_mentions
+    gif_count = gif_mentions
+
+    return {
+        "screenshot": screenshot_count,
+        "diagram": diagram_count,
+        "gif": gif_count,
+        "total": screenshot_count + diagram_count + gif_count
+    }
+
+
+def suggest_screenshot_placement(signals):
+    steps = signals["step_lines"]
+    if not steps:
+        return None
+
+    # Place visuals where users need a confidence checkpoint (validation/verification/save).
+    for index, step in enumerate(steps):
+        step_lower = step.lower()
+        if any(term in step_lower for term in CHECKPOINT_TERMS):
+            return {
+                "step_number": index + 1,
+                "step_text": step,
+                "reason": "Checkpoint step detected where users need confirmation"
+            }
+
+    middle = max(1, len(steps) // 2)
+    return {
+        "step_number": middle,
+        "step_text": steps[middle - 1],
+        "reason": "Mid-workflow placement provides orientation in long procedures"
+    }
+
+
+def _normalize_node_id(label):
+    return re.sub(r"[^a-zA-Z0-9]", "", label) or "Node"
+
+
+def extract_entities(content):
+    content_lower = content.lower()
+    entities = []
+    entities_cfg = knowledge_model.get("entities", {})
+    for name, metadata in entities_cfg.items():
+        aliases = metadata.get("aliases", [])
+        for alias in aliases:
+            pattern = r"\b" + re.escape(alias.lower()) + r"\b"
+            if re.search(pattern, content_lower):
+                entities.append(name)
+                break
+    return entities
+
+
+def extract_relationships(entities):
+    known = set(entities)
+    relations_cfg = knowledge_model.get("relationships", [])
+    relationships = []
+    for relation in relations_cfg:
+        if len(relation) != 2:
+            continue
+        src, dst = relation
+        if src in known and dst in known:
+            relationships.append((src, dst))
+
+    if relationships:
+        return relationships
+
+    ordered = list(entities)
+    fallback = []
+    for index in range(len(ordered) - 1):
+        fallback.append((ordered[index], ordered[index + 1]))
+    return fallback
+
+
+def build_diagram_blueprint(content):
+    nodes = extract_entities(content)
+
+    if len(nodes) < 2:
+        return None
+
+    relationships = extract_relationships(nodes)
+
+    mermaid_lines = ["graph LR"]
+    for src, dst in relationships:
+        mermaid_lines.append(f"{_normalize_node_id(src)}[{src}] --> {_normalize_node_id(dst)}[{dst}]")
+
+    return {
+        "nodes": nodes,
+        "relationships": [f"{src} -> {dst}" for src, dst in relationships],
+        "mermaid": "\n".join(mermaid_lines)
+    }
+
+
+def map_visual_family(visual_type):
+    if visual_type in SCREENSHOT_TYPES:
+        return "screenshot"
+    if visual_type in GIF_TYPES:
+        return "gif"
+    if visual_type in DIAGRAM_TYPES:
+        return "diagram"
+    return None
+
+
+def apply_gap_analysis(visual_type, existing_assets):
+    family = map_visual_family(visual_type)
+    if not family:
+        return {
+            "family": "other",
+            "existing_count": 0,
+            "required_count": 1,
+            "gap_message": "Evaluate manually"
+        }
+
+    existing_count = existing_assets.get(family, 0)
+    required_count = 1
+
+    if existing_count >= required_count:
+        gap_message = "No additional visuals needed"
+    else:
+        gap_message = "Additional visual recommended"
+
+    return {
+        "family": family,
+        "existing_count": existing_count,
+        "required_count": required_count,
+        "gap_message": gap_message
+    }
+
+
+def build_visual_package(recommendations, signals, placement_hint):
+    filtered = [item for item in recommendations if item["visual_type"] != "No recommendation" and item["confidence"] >= 45]
+    if len(filtered) < 2:
+        return None
+
+    package_items = [item["visual_type"] for item in filtered[:3]]
+    package_priority = "High" if signals["steps"] >= 6 or any(item["priority"] == "High" for item in filtered[:3]) else "Medium"
+    package_confidence = min(95, int(sum(item["confidence"] for item in filtered[:3]) / min(3, len(filtered)) + 10))
+
+    return {
+        "visual_type": "Visual Package",
+        "reason": "Multiple visual modalities improve comprehension for this section.",
+        "score": round(sum(item["score"] for item in filtered[:3]), 1),
+        "confidence": package_confidence,
+        "priority": package_priority,
+        "content_type": filtered[0]["content_type"],
+        "complexity_score": filtered[0]["complexity_score"],
+        "evidence": ["Package includes complementary visual types"],
+        "rationale": [
+            f"{signals['steps']} procedural steps detected",
+            "Combines structural, UI, and sequence perspectives"
+        ],
+        "suggested_content": "Create visuals in this order: " + " -> ".join(package_items) + ".",
+        "package_items": package_items,
+        "gap_message": "Additional visual package recommended",
+        "placement_hint": placement_hint if any(item in SCREENSHOT_TYPES.union(GIF_TYPES) for item in package_items) else None,
+        "diagram_blueprint": None
+    }
+
+
 def generate_suggested_content(visual_type, title, signals, matched_keywords):
     steps = signals["step_lines"][:8]
 
@@ -144,6 +332,9 @@ def detect_visuals(title, content):
     signals = compute_signals(content)
     content_type = classify_content(title, content, signals)
     complexity_hint = complexity_recommendation(signals)
+    existing_assets = detect_existing_visual_assets(content)
+    placement_hint = suggest_screenshot_placement(signals)
+    diagram_blueprint = build_diagram_blueprint(content)
     results = []
 
     for rule in rules:
@@ -205,6 +396,12 @@ def detect_visuals(title, content):
             f"{signals['warnings']} warnings and {signals['verifications']} verification steps"
         ]
 
+        gap = apply_gap_analysis(visual_type, existing_assets)
+        if gap["gap_message"] == "No additional visuals needed":
+            confidence = max(0, confidence - 22)
+            if confidence < 40:
+                priority = "Low"
+
         results.append({
             "visual_type": visual_type,
             "reason": rule["reason"],
@@ -215,6 +412,12 @@ def detect_visuals(title, content):
             "complexity_score": signals["complexity_score"],
             "evidence": evidence,
             "rationale": rationale,
+            "existing_visuals": existing_assets,
+            "gap_message": gap["gap_message"],
+            "existing_count": gap["existing_count"],
+            "required_count": gap["required_count"],
+            "placement_hint": placement_hint if visual_type in SCREENSHOT_TYPES.union(GIF_TYPES) else None,
+            "diagram_blueprint": diagram_blueprint if visual_type in DIAGRAM_TYPES else None,
             "suggested_content": generate_suggested_content(
                 visual_type,
                 title,
@@ -233,21 +436,42 @@ def detect_visuals(title, content):
         seen.add(item["visual_type"])
         deduped.append(item)
 
+    deduped = [
+        item for item in deduped
+        if not (item.get("gap_message") == "No additional visuals needed" and item["confidence"] < 70)
+    ]
+
+    # If a section already has several visuals, suppress low-confidence additions to avoid over-recommendation.
+    if existing_assets["total"] >= 2 and signals["steps"] <= 7 and content_type == "Procedure":
+        deduped = [item for item in deduped if item["confidence"] >= 75]
+
+    package = build_visual_package(deduped, signals, placement_hint)
+    if package:
+        deduped.insert(0, package)
+
     if not deduped:
         deduped.append({
             "visual_type": "No recommendation",
-            "reason": "No strong visual opportunity detected",
+            "reason": "No additional visuals needed based on current content and existing visuals",
             "score": 0,
             "confidence": 0,
             "priority": "Low",
             "content_type": content_type,
             "complexity_score": signals["complexity_score"],
-            "evidence": [],
+            "evidence": [
+                f"Existing visuals: {existing_assets['total']}"
+            ],
             "rationale": [
                 f"{signals['steps']} procedural steps detected",
                 f"{signals['ui_interactions']} UI interactions detected",
                 f"Complexity score {signals['complexity_score']}"
             ],
+            "existing_visuals": existing_assets,
+            "gap_message": "No additional visuals needed",
+            "existing_count": existing_assets["total"],
+            "required_count": 1,
+            "placement_hint": None,
+            "diagram_blueprint": diagram_blueprint,
             "suggested_content": "Keep text-only unless clarity issues appear during review."
         })
 

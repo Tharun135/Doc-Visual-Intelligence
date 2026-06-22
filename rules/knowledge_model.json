@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "PLC": {
+      "type": "device",
+      "aliases": ["plc", "controller", "s7 plc"]
+    },
+    "S7 Connector": {
+      "type": "application",
+      "aliases": ["s7 connector", "connector"]
+    },
+    "Industrial Edge Device": {
+      "type": "runtime",
+      "aliases": ["industrial edge device", "edge device", "edge"]
+    },
+    "Gateway": {
+      "type": "network_component",
+      "aliases": ["gateway", "industrial gateway"]
+    },
+    "HMI": {
+      "type": "device",
+      "aliases": ["hmi", "panel"]
+    },
+    "Server": {
+      "type": "system",
+      "aliases": ["server", "backend"]
+    },
+    "Cloud": {
+      "type": "external_system",
+      "aliases": ["cloud", "cloud platform"]
+    }
+  },
+  "relationships": [
+    ["PLC", "S7 Connector"],
+    ["S7 Connector", "Industrial Edge Device"],
+    ["Industrial Edge Device", "Cloud"],
+    ["PLC", "Gateway"],
+    ["HMI", "Gateway"],
+    ["Gateway", "Cloud"],
+    ["Server", "Cloud"]
+  ]
+}

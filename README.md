@@ -1,4 +1,4 @@
-# Visual Advisor
+# Documentation Visualization Assistant
 
 A Flask web application that analyzes technical documents and recommends where to add visual aids (flowcharts, screenshots, diagrams, GIFs, etc.) based on configurable rules.
 
@@ -15,6 +15,18 @@ A Flask web application that analyzes technical documents and recommends where t
 - Uses a procedure complexity score based on steps, nested steps, warnings, notes, prerequisites, and verification language.
 - Assigns visual priority (High, Medium, Low) to help writers focus effort.
 - Generates suggested visual content text so recommendations are immediately actionable.
+
+## Version 3 Assistant Features
+
+- Adds visual gap analysis so existing screenshots or diagrams can suppress unnecessary recommendations.
+- Detects recommended screenshot placement points, for example after validation or verification steps.
+- Produces multi-visual package recommendations when a section benefits from more than one visual type.
+- Extracts nodes and relationships for architecture and topology sections and outputs Mermaid-ready graph text.
+
+## Version 4 Foundation
+
+- Introduces a knowledge model in `rules/knowledge_model.json` with entities and relationships.
+- Uses entity and relationship extraction for diagram blueprint generation instead of hardcoded node matching.
 
 ## Project Structure
 

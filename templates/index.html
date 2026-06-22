@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visual Advisor - Scan Documentation Visual Opportunities</title>
+    <title>Documentation Visualization Assistant - Analyze Visual Opportunities</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -23,7 +23,7 @@
                     </svg>
                     <div class="logo-radar"></div>
                 </div>
-                <span>Visual Advisor</span>
+                <span>Documentation Visualization Assistant</span>
             </a>
             <div class="overview-banner">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -31,7 +31,7 @@
                     <line x1="12" y1="16" x2="12" y2="12"></line>
                     <line x1="12" y1="8" x2="12.01" y2="8"></line>
                 </svg>
-                <span>AI Documentation Scan Engine v1.2</span>
+                <span>Documentation Intelligence Engine v3.0</span>
             </div>
         </div>
     </header>
@@ -262,6 +262,17 @@
                                                     <span class="evidence-pill">{{ suggestion.complexity_score }}</span>
                                                 </div>
 
+                                                {% if suggestion.gap_message %}
+                                                    <div class="reco-evidence" style="margin-top: 0.55rem;">
+                                                        <span class="evidence-title">Visual Gap:</span>
+                                                        <span class="evidence-pill">{{ suggestion.gap_message }}</span>
+                                                        <span class="evidence-title">Existing:</span>
+                                                        <span class="evidence-pill">{{ suggestion.existing_count }}</span>
+                                                        <span class="evidence-title">Target:</span>
+                                                        <span class="evidence-pill">{{ suggestion.required_count }}</span>
+                                                    </div>
+                                                {% endif %}
+
                                                 {% if suggestion.evidence %}
                                                     <div class="reco-evidence">
                                                         <span class="evidence-title">Detection Evidence:</span>
@@ -287,6 +298,52 @@
                                                             <span class="status">Draft</span>
                                                         </div>
                                                         <p class="reco-reason" style="margin: 0; color: var(--text-secondary);">{{ suggestion.suggested_content }}</p>
+                                                    </div>
+                                                {% endif %}
+
+                                                {% if suggestion.placement_hint %}
+                                                    <div class="simulator-box" style="padding: 0.8rem 1rem; margin-top: 0.65rem;">
+                                                        <div class="sim-label" style="margin-bottom: 0.4rem;">
+                                                            <span>Placement Recommendation</span>
+                                                            <span class="status">Step {{ suggestion.placement_hint.step_number }}</span>
+                                                        </div>
+                                                        <p class="reco-reason" style="margin: 0; color: var(--text-secondary);">Insert visual after step {{ suggestion.placement_hint.step_number }}: {{ suggestion.placement_hint.step_text }}</p>
+                                                    </div>
+                                                {% endif %}
+
+                                                {% if suggestion.package_items %}
+                                                    <div class="simulator-box" style="padding: 0.8rem 1rem; margin-top: 0.65rem;">
+                                                        <div class="sim-label" style="margin-bottom: 0.4rem;">
+                                                            <span>Recommended Package</span>
+                                                            <span class="status">Multi-Visual</span>
+                                                        </div>
+                                                        <div class="reco-evidence" style="margin-top: 0;">
+                                                            {% for item in suggestion.package_items %}
+                                                                <span class="evidence-pill">{{ loop.index }}. {{ item }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+
+                                                {% if suggestion.diagram_blueprint %}
+                                                    <div class="simulator-box" style="padding: 0.8rem 1rem; margin-top: 0.65rem;">
+                                                        <div class="sim-label" style="margin-bottom: 0.4rem;">
+                                                            <span>Diagram Blueprint</span>
+                                                            <span class="status">Mermaid Ready</span>
+                                                        </div>
+                                                        <div class="reco-evidence" style="margin-top: 0;">
+                                                            <span class="evidence-title">Nodes:</span>
+                                                            {% for node in suggestion.diagram_blueprint.nodes %}
+                                                                <span class="evidence-pill">{{ node }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                        <div class="reco-evidence" style="margin-top: 0.45rem;">
+                                                            <span class="evidence-title">Relationships:</span>
+                                                            {% for relation in suggestion.diagram_blueprint.relationships %}
+                                                                <span class="evidence-pill">{{ relation }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                        <pre class="code-sim" style="margin-top: 0.5rem; white-space: pre-wrap;">{{ suggestion.diagram_blueprint.mermaid }}</pre>
                                                     </div>
                                                 {% endif %}
 
