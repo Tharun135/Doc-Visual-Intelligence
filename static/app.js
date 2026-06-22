@@ -264,6 +264,8 @@ function highlightContentKeywords(detailPanel) {
     const setupKeywords = ['cable', 'mount', 'power supply', 'device', 'mounting'];
     const transferKeywords = ['import', 'export', 'upload', 'download', 'synchronisation', 'sync'];
     const formatKeywords = ['json', 'xml', 'yaml'];
+    const topologyKeywords = ['device', 'connector', 'edge device', 'plc', 'cloud', 'gateway', 'network'];
+    const dataFlowKeywords = ['collect', 'send', 'transfer', 'publish', 'subscribe', 'data flow'];
 
     // Escape regex characters helper
     const escapeRegExp = string => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -282,6 +284,8 @@ function highlightContentKeywords(detailPanel) {
     applyRegexHighlight(setupKeywords, 'highlight-term');
     applyRegexHighlight(transferKeywords, 'highlight-term');
     applyRegexHighlight(formatKeywords, 'highlight-term');
+    applyRegexHighlight(topologyKeywords, 'highlight-term');
+    applyRegexHighlight(dataFlowKeywords, 'highlight-term');
 
     // Highlight steps (numbers starting a line)
     const stepRegex = /(^\d+[\.\)]|^\bstep\s+\d+\b)/gim;

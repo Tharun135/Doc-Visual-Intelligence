@@ -2,512 +2,253 @@ import json
 import re
 
 
-# --------------------------------------
-# Load rules
-# --------------------------------------
-
-with open("rules/visual_rules.json", "r") as file:
+with open("rules/visual_rules.json", "r", encoding="utf-8") as file:
     rules = json.load(file)
 
 
-# --------------------------------------
-# Count procedure steps
-# --------------------------------------
-
-def count_steps(content):
-
-    patterns = [
-
-        r'^\d+\.',          # 1.
-        r'^step\s+\d+',     # Step 1
-        r'^\d+\)'           # 1)
-
-    ]
-
-    total = 0
-
-    for pattern in patterns:
-
-        matches = re.findall(
-            pattern,
-            content,
-            re.MULTILINE | re.IGNORECASE
-        )
-
-        total += len(matches)
-
-    return total
+ACTION_VERBS = {
+    "open", "click", "select", "choose", "validate", "start", "verify",
+    "check", "configure", "deploy", "save", "run", "import", "export",
+    "upload", "download", "add", "remove", "connect", "set", "enter"
+}
 
 
-# --------------------------------------
-# Detect visual opportunities
-# --------------------------------------
+def _count_pattern(content, pattern):
+    return len(re.findall(pattern, content, re.MULTILINE | re.IGNORECASE))
+
+
+def extract_procedure_steps(content):
+    numbered = re.findall(r"^\s*(?:\d+[\.)]|step\s+\d+)\s*(.+)$", content, re.MULTILINE | re.IGNORECASE)
+    if numbered:
+        return [step.strip() for step in numbered if step.strip()]
+
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    inferred = []
+    for line in lines:
+        first_word = re.sub(r"[^a-zA-Z]", "", line.split()[0]).lower() if line.split() else ""
+        if first_word in ACTION_VERBS:
+            inferred.append(line)
+    return inferred
+
+
+def compute_signals(content):
+    step_lines = extract_procedure_steps(content)
+    numbered_steps = _count_pattern(content, r"^\s*(?:\d+[\.)]|step\s+\d+)")
+    nested_steps = _count_pattern(content, r"^\s{2,}(?:[-*]|[a-z][\.)])")
+    warnings = _count_pattern(content, r"\b(warning|caution|important|notice)\b")
+    notes = _count_pattern(content, r"\b(note|tip|hint)\b")
+    prerequisites = _count_pattern(content, r"\b(prerequisite|requirement|before you begin|precondition)\b")
+    verifications = _count_pattern(content, r"\b(verify|validation|validate|check status|confirm)\b")
+    ui_interactions = _count_pattern(content, r"\b(click|select|menu|dialog|tab|button|panel)\b")
+    word_count = len(content.split())
+
+    complexity_score = (
+        len(step_lines)
+        + nested_steps * 1.5
+        + warnings * 1.5
+        + notes * 0.5
+        + prerequisites
+        + verifications * 1.2
+    )
+
+    return {
+        "step_lines": step_lines,
+        "steps": len(step_lines),
+        "numbered_steps": numbered_steps,
+        "nested_steps": nested_steps,
+        "warnings": warnings,
+        "notes": notes,
+        "prerequisites": prerequisites,
+        "verifications": verifications,
+        "ui_interactions": ui_interactions,
+        "word_count": word_count,
+        "complexity_score": round(complexity_score, 1)
+    }
+
+
+def classify_content(title, content, signals):
+    title_lower = title.lower()
+    content_lower = content.lower()
+
+    if re.search(r"\b(troubleshoot|error|failure|issue|fault)\b", title_lower + " " + content_lower):
+        return "Troubleshooting"
+
+    if signals["steps"] >= 3 or re.search(r"\b(procedure|steps|how to)\b", title_lower):
+        return "Procedure"
+
+    if re.search(r"\b(topology|architecture|system layout|network|integration)\b", title_lower + " " + content_lower):
+        return "Architecture"
+
+    if re.search(r"\b(parameter|field|property|reference|api|table)\b", title_lower + " " + content_lower):
+        return "Reference"
+
+    return "Concept"
+
+
+def complexity_recommendation(signals):
+    steps = signals["steps"]
+    if steps < 3:
+        return "No visual"
+    if steps <= 5:
+        return "Screenshot"
+    if steps <= 10:
+        return "Workflow Diagram"
+    return "GIF Tutorial"
+
+
+def build_priority(confidence, signals):
+    if confidence >= 85 or signals["complexity_score"] >= 9:
+        return "High"
+    if confidence >= 65 or signals["complexity_score"] >= 5:
+        return "Medium"
+    return "Low"
+
+
+def _keyword_hits(content_lower, keyword):
+    keyword_lower = keyword.lower()
+    if " " in keyword_lower:
+        return 1 if keyword_lower in content_lower else 0
+    return len(re.findall(r"\b" + re.escape(keyword_lower) + r"\b", content_lower))
+
+
+def generate_suggested_content(visual_type, title, signals, matched_keywords):
+    steps = signals["step_lines"][:8]
+
+    if visual_type in {"Workflow Diagram", "Sequence Diagram", "GIF Tutorial"}:
+        if steps:
+            flow = " -> ".join(steps)
+            return f"Create a {visual_type.lower()} for section '{title}' with this flow: {flow}."
+        return f"Create a {visual_type.lower()} that shows start, action sequence, verification, and end states."
+
+    if visual_type in {"Screenshot", "Configuration Screenshot"}:
+        focus_terms = ", ".join(matched_keywords[:5]) if matched_keywords else "main UI controls"
+        return f"Capture the UI state where users interact with: {focus_terms}. Highlight the active dialog or tab."
+
+    if visual_type in {"Topology Diagram", "Architecture Diagram"}:
+        return "Show systems and connections between PLC, edge device, gateway, and cloud endpoints. Label each channel."
+
+    if visual_type == "Data Flow Diagram":
+        return "Visualize source, transformation, and destination steps. Mark publish/subscribe or transfer paths with arrows."
+
+    if visual_type == "Mapping Table":
+        return "Build a table with columns: Source field, Target field, Data type, Constraint, Notes."
+
+    if visual_type == "Before/After Comparison":
+        return "Create a side-by-side visual comparing pre-change and post-change states, including key metrics."
+
+    return "Provide a concise visual aid that explains the core concept and key decision points for this section."
+
 
 def detect_visuals(title, content):
-
+    content_lower = content.lower()
+    signals = compute_signals(content)
+    content_type = classify_content(title, content, signals)
+    complexity_hint = complexity_recommendation(signals)
     results = []
 
-    content_lower = content.lower()
-    title_lower = title.lower()
-
-    step_count = count_steps(
-        content
-    )
-
-    word_count = len(
-        content.split()
-    )
-
-
-    print("\n=================")
-    print("Content Preview:")
-    print(content[:250])
-
-    print("\nSteps:", step_count)
-    print("Words:", word_count)
-
-    print("=================")
-
-
     for rule in rules:
-
-        score = 0
-
+        visual_type = rule["visual_type"]
+        score = 0.0
         evidence = []
-
         matched_keywords = []
 
-
-        # ----------------------------------
-        # Keyword matching
-        # ----------------------------------
-
-        keywords = rule.get(
-            "keywords",
-            []
-        )
-
-        for keyword in keywords:
-
-            pattern = (
-
-                r'\b'
-
-                + re.escape(
-                    keyword.lower()
-                )
-
-                + r'\b'
-            )
-
-            if re.search(
-                pattern,
-                content_lower
-            ):
-
-                matched_keywords.append(
-                    keyword
-                )
-
-
-        # ----------------------------------
-        # Keyword score
-        # ----------------------------------
+        for keyword in rule.get("keywords", []):
+            hits = _keyword_hits(content_lower, keyword)
+            if hits > 0:
+                score += hits * rule.get("weight", 1)
+                matched_keywords.append(keyword)
 
         if matched_keywords:
+            evidence.append("Keywords: " + ", ".join(matched_keywords[:6]))
 
-            weight = rule.get(
-                "weight",
-                1
-            )
+        min_steps = rule.get("min_steps")
+        if min_steps and signals["steps"] >= min_steps:
+            score += 2
+            evidence.append(f"{signals['steps']} procedural steps detected")
 
-            score += (
-
-                weight *
-
-                len(
-                    matched_keywords
-                )
-            )
-
-            evidence.append(
-
-                "Keywords: "
-
-                +
-
-                ", ".join(
-                    matched_keywords
-                )
-
-            )
-
-
-        # ----------------------------------
-        # Procedure scoring
-        # ----------------------------------
-
-        if step_count >= 5:
-
-            if (
-
-                rule[
-                    "visual_type"
-                ]
-
-                == "Flowchart"
-
-            ):
-
-                score += 4
-
-                evidence.append(
-
-                    f"{step_count} steps detected"
-
-                )
-
-
-        elif step_count >= 2:
-
-            if (
-
-                rule[
-                    "visual_type"
-                ]
-
-                == "Screenshot"
-
-            ):
-
-                score += 2
-
-                evidence.append(
-
-                    f"{step_count} UI steps detected"
-
-                )
-
-
-        # ----------------------------------
-        # Long content scoring
-        # ----------------------------------
-
-        min_words = rule.get(
-            "min_words"
-        )
-
-        if (
-
-            min_words
-
-            and
-
-            word_count >= min_words
-
-        ):
-
+        min_words = rule.get("min_words")
+        if min_words and signals["word_count"] >= min_words:
             score += 1
-
-            evidence.append(
-
-                f"{word_count} words detected"
-
-            )
-
-
-        # ----------------------------------
-        # Smart recommendation logic
-        # ----------------------------------
-
-        # Long UI procedures
-        # prefer GIF over Screenshot
-
-        if (
-
-            rule["visual_type"]
-
-            == "Screenshot"
-
-            and
-
-            step_count >= 6
-
-        ):
-
-            score = max(
-                score - 2,
-                1
-            )
-
-
-        if (
-
-            rule["visual_type"]
-
-            == "GIF Tutorial"
-
-            and
-
-            step_count >= 6
-
-        ):
-
-            score += 4
-
-            evidence.append(
-                "Long interactive workflow"
-            )
-
-
-        # Suppress flowchart
-        # for Result sections
-
-        if (
-
-            rule["visual_type"]
-
-            == "Flowchart"
-
-            and
-
-            "result" in content_lower
-
-        ):
-
-            score = 0
-
-        # Suppress architecture diagrams
-        # inside procedures
-
-        if (
-
-            rule["visual_type"]
-
-            == "Architecture Diagram"
-
-            and
-
-            step_count >= 3
-
-        ):
-
-            score = 0
-
-        # ----------------------------------
-        # Section-aware filtering
-        # ----------------------------------
-
-        # Procedures prioritize workflow visuals
-
-        if (
-
-            "procedure" in title_lower
-
-        ):
-
-            if (
-
-                rule["visual_type"]
-
-                in [
-
-                    "Architecture Diagram",
-                    "Decision Tree"
-
-                ]
-
-            ):
-
-                score = 0
-
-
-        # Result sections usually do not
-        # require visuals
-
-        if (
-
-            "result" in title_lower
-
-        ):
-
-            score = 0
-
-
-        # Requirement sections usually
-        # avoid screenshots
-
-        if (
-
-            "requirement" in title_lower
-
-            and
-
-            rule["visual_type"]
-
-            == "Screenshot"
-
-        ):
-
-            score = 0
-        # ----------------------------------
-        # Save result
-        # ----------------------------------
-
-        if score > 0:
-
-            confidence = min(
-                score * 20,
-                100
-            )
-
-            results.append({
-
-                "visual_type":
-                rule[
-                    "visual_type"
-                ],
-
-                "reason":
-                rule[
-                    "reason"
-                ],
-
-                "score":
-                score,
-
-                "confidence":
-                confidence,
-
-                "evidence":
-                evidence
-
-            })
-
-    # ----------------------------------
-    # Remove duplicates
-    # ----------------------------------
-
-    unique_results = []
-
-    seen = set()
-
-    for result in results:
-
-        visual_type = result["visual_type"]
-
-        if visual_type not in seen:
-
-            seen.add(
-                visual_type
-            )
-
-            unique_results.append(
-                result
-            )
-
-
-    # ----------------------------------
-    # Remove redundant recommendations
-    # ----------------------------------
-
-    visual_types = [
-
-        r["visual_type"]
-
-        for r in unique_results
-
-    ]
-
-
-    # GIF replaces flowchart
-    # for long interactive procedures
-
-    if (
-
-        "GIF Tutorial"
-
-        in visual_types
-
-        and
-
-        step_count >= 6
-
-    ):
-
-        unique_results = [
-
-            r for r in unique_results
-
-            if r["visual_type"]
-
-            != "Flowchart"
-
+            evidence.append(f"{signals['word_count']} words detected")
+
+        allowed_types = rule.get("content_types", [])
+        if allowed_types and content_type in allowed_types:
+            score += 2
+            evidence.append(f"Content classified as {content_type}")
+        elif allowed_types:
+            score = max(score - 2, 0)
+
+        if complexity_hint == visual_type:
+            score += 3
+            evidence.append(f"Complexity rule suggests {visual_type}")
+
+        if visual_type == "Screenshot" and signals["steps"] > 6:
+            score = max(score - 2, 0)
+
+        if visual_type == "GIF Tutorial" and signals["steps"] > 10:
+            score += 2
+
+        if visual_type in {"Architecture Diagram", "Topology Diagram"} and content_type == "Procedure":
+            score = max(score - 2, 0)
+
+        if visual_type == "Before/After Comparison" and content_type != "Troubleshooting":
+            score = max(score - 1, 0)
+
+        if score <= 0:
+            continue
+
+        confidence = min(int(score * 11 + signals["ui_interactions"] * 2), 100)
+        priority = build_priority(confidence, signals)
+        rationale = [
+            f"{signals['steps']} procedural steps detected",
+            f"{signals['ui_interactions']} UI interactions detected",
+            f"{signals['warnings']} warnings and {signals['verifications']} verification steps"
         ]
 
-
-    # Screenshot replaces flowchart
-    # for short UI workflows
-
-    if (
-
-        "Screenshot"
-
-        in visual_types
-
-        and
-
-        step_count <= 4
-
-    ):
-
-        unique_results = [
-
-            r for r in unique_results
-
-            if r["visual_type"]
-
-            != "Flowchart"
-
-        ]
-
-
-    # ----------------------------------
-    # Sort results
-    # ----------------------------------
-
-    unique_results = sorted(
-
-        unique_results,
-
-        key=lambda x: x["score"],
-
-        reverse=True
-
-    )
-
-
-    # ----------------------------------
-    # Fallback
-    # ----------------------------------
-
-    if not unique_results:
-
-        unique_results.append({
-
-            "visual_type":
-            "No recommendation",
-
-            "reason":
-            "No strong visual opportunity detected",
-
-            "score":0,
-
-            "confidence":0,
-
-            "evidence":[]
-
+        results.append({
+            "visual_type": visual_type,
+            "reason": rule["reason"],
+            "score": round(score, 1),
+            "confidence": confidence,
+            "priority": priority,
+            "content_type": content_type,
+            "complexity_score": signals["complexity_score"],
+            "evidence": evidence,
+            "rationale": rationale,
+            "suggested_content": generate_suggested_content(
+                visual_type,
+                title,
+                signals,
+                matched_keywords
+            )
         })
 
+    results = sorted(results, key=lambda item: (item["confidence"], item["score"]), reverse=True)
 
-    return unique_results[:2]   
+    deduped = []
+    seen = set()
+    for item in results:
+        if item["visual_type"] in seen:
+            continue
+        seen.add(item["visual_type"])
+        deduped.append(item)
+
+    if not deduped:
+        deduped.append({
+            "visual_type": "No recommendation",
+            "reason": "No strong visual opportunity detected",
+            "score": 0,
+            "confidence": 0,
+            "priority": "Low",
+            "content_type": content_type,
+            "complexity_score": signals["complexity_score"],
+            "evidence": [],
+            "rationale": [
+                f"{signals['steps']} procedural steps detected",
+                f"{signals['ui_interactions']} UI interactions detected",
+                f"Complexity score {signals['complexity_score']}"
+            ],
+            "suggested_content": "Keep text-only unless clarity issues appear during review."
+        })
+
+    return deduped[:3]

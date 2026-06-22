@@ -218,22 +218,22 @@
                                             <div class="reco-card">
                                                 <div class="reco-card-header">
                                                     <div class="reco-type-container">
-                                                        <div class="reco-icon-wrapper {% if suggestion.visual_type == 'Flowchart' %}reco-flowchart{% elif suggestion.visual_type == 'Screenshot' %}reco-screenshot{% elif suggestion.visual_type == 'Architecture Diagram' %}reco-architecture{% elif suggestion.visual_type == 'Decision Tree' %}reco-decision{% elif suggestion.visual_type == 'Illustration' %}reco-illustration{% elif suggestion.visual_type == 'Workflow Diagram' %}reco-workflow{% elif suggestion.visual_type == 'Code Example' %}reco-code{% elif suggestion.visual_type == 'Visual Summary' %}reco-summary{% elif suggestion.visual_type == 'GIF Tutorial' %}reco-gif{% else %}reco-none{% endif %}">
+                                                        <div class="reco-icon-wrapper {% if suggestion.visual_type == 'Flowchart' %}reco-flowchart{% elif suggestion.visual_type in ['Screenshot', 'Configuration Screenshot'] %}reco-screenshot{% elif suggestion.visual_type in ['Architecture Diagram', 'Topology Diagram', 'Data Flow Diagram'] %}reco-architecture{% elif suggestion.visual_type == 'Decision Tree' %}reco-decision{% elif suggestion.visual_type == 'Illustration' %}reco-illustration{% elif suggestion.visual_type in ['Workflow Diagram', 'Sequence Diagram'] %}reco-workflow{% elif suggestion.visual_type in ['Code Example', 'Mapping Table'] %}reco-code{% elif suggestion.visual_type in ['Visual Summary', 'Before/After Comparison'] %}reco-summary{% elif suggestion.visual_type == 'GIF Tutorial' %}reco-gif{% else %}reco-none{% endif %}">
                                                             {% if suggestion.visual_type == 'Flowchart' %}
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                                                            {% elif suggestion.visual_type == 'Screenshot' %}
+                                                            {% elif suggestion.visual_type in ['Screenshot', 'Configuration Screenshot'] %}
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                                                            {% elif suggestion.visual_type == 'Architecture Diagram' %}
+                                                            {% elif suggestion.visual_type in ['Architecture Diagram', 'Topology Diagram', 'Data Flow Diagram'] %}
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                                                             {% elif suggestion.visual_type == 'Decision Tree' %}
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.5" y1="10.5" x2="15.5" y2="6.5"></line><line x1="8.5" y1="13.5" x2="15.5" y2="17.5"></line></svg>
                                                             {% elif suggestion.visual_type == 'Illustration' %}
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                                                            {% elif suggestion.visual_type == 'Workflow Diagram' %}
+                                                            {% elif suggestion.visual_type in ['Workflow Diagram', 'Sequence Diagram'] %}
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
-                                                            {% elif suggestion.visual_type == 'Code Example' %}
+                                                            {% elif suggestion.visual_type in ['Code Example', 'Mapping Table'] %}
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                                                            {% elif suggestion.visual_type == 'Visual Summary' %}
+                                                            {% elif suggestion.visual_type in ['Visual Summary', 'Before/After Comparison'] %}
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
                                                             {% elif suggestion.visual_type == 'GIF Tutorial' %}
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
@@ -253,12 +253,40 @@
 
                                                 <p class="reco-reason">{{ suggestion.reason }}</p>
 
+                                                <div class="reco-evidence" style="margin-top: 0.55rem;">
+                                                    <span class="evidence-title">Priority:</span>
+                                                    <span class="evidence-pill">{{ suggestion.priority }}</span>
+                                                    <span class="evidence-title">Content Type:</span>
+                                                    <span class="evidence-pill">{{ suggestion.content_type }}</span>
+                                                    <span class="evidence-title">Complexity:</span>
+                                                    <span class="evidence-pill">{{ suggestion.complexity_score }}</span>
+                                                </div>
+
                                                 {% if suggestion.evidence %}
                                                     <div class="reco-evidence">
                                                         <span class="evidence-title">Detection Evidence:</span>
                                                         {% for item in suggestion.evidence %}
                                                             <span class="evidence-pill">{{ item }}</span>
                                                         {% endfor %}
+                                                    </div>
+                                                {% endif %}
+
+                                                {% if suggestion.rationale %}
+                                                    <div class="reco-evidence" style="margin-top: 0.55rem;">
+                                                        <span class="evidence-title">Reason:</span>
+                                                        {% for item in suggestion.rationale %}
+                                                            <span class="evidence-pill">{{ item }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+
+                                                {% if suggestion.suggested_content %}
+                                                    <div class="simulator-box" style="padding: 0.8rem 1rem; margin-top: 0.65rem;">
+                                                        <div class="sim-label" style="margin-bottom: 0.4rem;">
+                                                            <span>Suggested Visual Content</span>
+                                                            <span class="status">Draft</span>
+                                                        </div>
+                                                        <p class="reco-reason" style="margin: 0; color: var(--text-secondary);">{{ suggestion.suggested_content }}</p>
                                                     </div>
                                                 {% endif %}
 

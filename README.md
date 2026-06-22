@@ -9,9 +9,16 @@ A Flask web application that analyzes technical documents and recommends where t
 3. Each section is evaluated against a set of scoring rules to determine which visual type would best support the content.
 4. Results are displayed per section with a confidence score and supporting evidence.
 
+## Version 2 Intelligence
+
+- Adds section-level content classification: Procedure, Concept, Architecture, Reference, Troubleshooting.
+- Uses a procedure complexity score based on steps, nested steps, warnings, notes, prerequisites, and verification language.
+- Assigns visual priority (High, Medium, Low) to help writers focus effort.
+- Generates suggested visual content text so recommendations are immediately actionable.
+
 ## Project Structure
 
-```
+```text
 visual-advisor/
 ├── app.py                          # Flask application entry point
 ├── rules/
@@ -38,6 +45,12 @@ visual-advisor/
 | VR007 | Code Example         | Structured data indicators (json, xml, yaml) |
 | VR008 | Visual Summary       | Content blocks exceeding 100 words           |
 | VR009 | GIF Tutorial         | Long interactive workflows (6+ steps)        |
+| VR010 | Topology Diagram     | System communication terms (device, PLC, cloud, gateway) |
+| VR011 | Configuration Screenshot | Multi-step configuration UI interactions |
+| VR012 | Data Flow Diagram    | Data movement terms (collect, send, publish, subscribe) |
+| VR013 | Mapping Table        | Field mapping terms (source, target, datatype) |
+| VR014 | Before/After Comparison | State comparison language (before, after, changed) |
+| VR015 | Sequence Diagram     | Ordered sequence language with multiple steps |
 
 ## Getting Started
 
