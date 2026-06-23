@@ -1,41 +1,50 @@
 {
   "entities": {
-    "PLC": {
+    "Controller": {
       "type": "device",
-      "aliases": ["plc", "controller", "s7 plc"]
+      "description": "Processing unit or control device",
+      "aliases": ["controller", "plc", "cpu", "processor", "s7-1500", "s7-1200", "s7-300", "microcontroller", "embedded system"]
     },
-    "S7 Connector": {
+    "Connector": {
       "type": "application",
-      "aliases": ["s7 connector", "connector"]
+      "description": "Software or protocol bridge component",
+      "aliases": ["connector", "adapter", "bridge", "driver", "interface", "middleware"]
     },
-    "Industrial Edge Device": {
+    "Edge Device": {
       "type": "runtime",
-      "aliases": ["industrial edge device", "edge device", "edge"]
+      "description": "Computing node at network edge",
+      "aliases": ["edge device", "edge", "edge node", "edge gateway", "iot device", "remote node"]
     },
     "Gateway": {
       "type": "network_component",
-      "aliases": ["gateway", "industrial gateway"]
+      "description": "Network access point or bridge",
+      "aliases": ["gateway", "access point", "network bridge", "firewall", "router", "reverse proxy"]
     },
-    "HMI": {
-      "type": "device",
-      "aliases": ["hmi", "panel"]
+    "UI Component": {
+      "type": "interface",
+      "description": "User-facing screen or panel",
+      "aliases": ["hmi", "panel", "dashboard", "ui", "screen", "interface", "display", "console"]
     },
     "Server": {
       "type": "system",
-      "aliases": ["server", "backend"]
+      "description": "Backend processing system",
+      "aliases": ["server", "backend", "application server", "web server", "database server", "service"]
     },
-    "Cloud": {
+    "External System": {
       "type": "external_system",
-      "aliases": ["cloud", "cloud platform"]
+      "description": "Remote system outside organization",
+      "aliases": ["cloud", "cloud platform", "saas", "external service", "remote system", "third-party"]
     }
   },
   "relationships": [
-    ["PLC", "S7 Connector"],
-    ["S7 Connector", "Industrial Edge Device"],
-    ["Industrial Edge Device", "Cloud"],
-    ["PLC", "Gateway"],
-    ["HMI", "Gateway"],
-    ["Gateway", "Cloud"],
-    ["Server", "Cloud"]
+    ["Controller", "Connector"],
+    ["Connector", "Edge Device"],
+    ["Edge Device", "External System"],
+    ["Controller", "Gateway"],
+    ["UI Component", "Gateway"],
+    ["Gateway", "External System"],
+    ["Server", "External System"],
+    ["Controller", "UI Component"],
+    ["Server", "Gateway"]
   ]
 }

@@ -34,6 +34,18 @@ DIAGRAM_TYPES = {
 
 GIF_TYPES = {"GIF Tutorial"}
 
+RELATION_PATTERNS = [
+    (r"(?P<src>.+?)\s+sends\s+(?:data\s+)?to\s+(?P<dst>.+)", "sends"),
+    (r"(?P<src>.+?)\s+publishes\s+(?:data\s+)?to\s+(?P<dst>.+)", "publishes"),
+    (r"(?P<src>.+?)\s+communicates\s+with\s+(?P<dst>.+)", "communicates with"),
+    (r"(?P<src>.+?)\s+connects\s+(?:directly\s+)?to\s+(?P<dst>.+)", "connects to"),
+    (r"(?P<src>.+?)\s+deploys\s+to\s+(?P<dst>.+)", "deploys to"),
+    (r"(?P<src>.+?)\s+transfers\s+(?:data\s+)?to\s+(?P<dst>.+)", "transfers to"),
+    (r"(?P<src>.+?)\s+forwards\s+(?:data\s+)?to\s+(?P<dst>.+)", "forwards"),
+    (r"(?P<src>.+?)\s+routes\s+(?:data\s+)?to\s+(?P<dst>.+)", "routes to"),
+    (r"(?P<src>.+?)\s+passes\s+(?:data\s+)?to\s+(?P<dst>.+)", "passes to")
+]
+
 
 def _count_pattern(content, pattern):
     return len(re.findall(pattern, content, re.MULTILINE | re.IGNORECASE))
@@ -51,6 +63,347 @@ def extract_procedure_steps(content):
         if first_word in ACTION_VERBS:
             inferred.append(line)
     return inferred
+
+
+def _sanitize_diagram_label(label):
+    sanitized = re.sub(r"\s+", " ", label.strip())
+    sanitized = sanitized.strip(" -:;,.()[]{}")
+    return sanitized.replace('"', "'")
+
+
+def _clean_component_label(text):
+    label = _sanitize_diagram_label(text)
+    label = re.sub(r"^(the|a|an)\s+", "", label, flags=re.IGNORECASE)
+    label = re.sub(r"\b(?:data|messages?|traffic|requests?)$", "", label, flags=re.IGNORECASE).strip()
+    return label
+
+
+def _split_content_sentences(content):
+    fragments = []
+    for block in content.splitlines():
+        line = block.strip()
+        if not line:
+            continue
+        pieces = re.split(r"(?<=[.!?])\s+", line)
+        for piece in pieces:
+            candidate = piece.strip()
+            if candidate:
+                fragments.append(candidate)
+    return fragments
+
+
+def _build_node_id(index):
+    return f"N{index + 1}"
+
+
+def _resolve_component_reference(label, known_labels):
+    lowered = label.lower()
+    for existing in reversed(known_labels):
+        existing_lower = existing.lower()
+        if existing_lower == lowered:
+            return existing
+        if existing_lower.endswith(f" {lowered}"):
+            return existing
+    return label
+
+
+def extract_relationship_statements(content):
+    relationships = []
+    seen = set()
+
+    for sentence in _split_content_sentences(content):
+        cleaned_sentence = sentence.strip().strip(".")
+        for pattern, label in RELATION_PATTERNS:
+            match = re.match(pattern, cleaned_sentence, re.IGNORECASE)
+            if not match:
+                continue
+
+            src = _clean_component_label(match.group("src"))
+            dst = _clean_component_label(match.group("dst"))
+            if not src or not dst or src.lower() == dst.lower():
+                continue
+
+            key = (src.lower(), label, dst.lower())
+            if key in seen:
+                continue
+
+            seen.add(key)
+            relationships.append({
+                "source": src,
+                "label": label,
+                "target": dst
+            })
+            break
+
+    return relationships
+
+
+def extract_decision_logic(content):
+    """Extract if/then/else logic from content using multiple patterns."""
+    normalized = re.sub(r"\s+", " ", content).strip()
+    
+    # Pattern 1: "if ..., ... . otherwise/else, ..."
+    match = re.search(
+        r"if\s+(?P<condition>[^,.]+),\s*(?P<yes>[^.]+)\.\s*(?:otherwise|else)\s*,?\s*(?P<no>[^.]+)",
+        normalized,
+        re.IGNORECASE
+    )
+    if match:
+        return {
+            "condition": _sanitize_diagram_label(match.group("condition")),
+            "yes_action": _sanitize_diagram_label(match.group("yes")),
+            "no_action": _sanitize_diagram_label(match.group("no"))
+        }
+    
+    # Pattern 2: Multi-line if/else with numbered bullets
+    # "2. If ... : ... 3. If ... : ..."
+    if_matches = re.findall(
+        r"if\s+([^:]+):\s*([^.]+)\.",
+        normalized,
+        re.IGNORECASE
+    )
+    if len(if_matches) >= 2:
+        # Take first as success, second as failure
+        condition, yes_action = if_matches[0]
+        _, no_action = if_matches[1]
+        return {
+            "condition": _sanitize_diagram_label(condition.strip()),
+            "yes_action": _sanitize_diagram_label(yes_action.strip()),
+            "no_action": _sanitize_diagram_label(no_action.strip())
+        }
+    
+    # Pattern 3: "succeeds" vs "fails" keywords
+    if re.search(r"succeed|success", normalized, re.IGNORECASE) and \
+       re.search(r"fail|error", normalized, re.IGNORECASE):
+        # Extract the test/check action
+        check_match = re.search(r"(test|check|verify)\s+([^.]+)\.", normalized, re.IGNORECASE)
+        if check_match:
+            check_action = check_match.group(2).strip()
+            # Extract success and failure outcomes
+            success = re.search(r"(?:if|when)\s+(?:it\s+)?succeed[s]?[^.]*:\s*([^.]+)", normalized, re.IGNORECASE)
+            failure = re.search(r"(?:if|when|otherwise)\s+(?:it\s+)?fail[s]?[^.]*:\s*([^.]+)", normalized, re.IGNORECASE)
+            
+            if success and failure:
+                return {
+                    "condition": _sanitize_diagram_label(check_action),
+                    "yes_action": _sanitize_diagram_label(success.group(1).strip()),
+                    "no_action": _sanitize_diagram_label(failure.group(1).strip())
+                }
+    
+    return None
+
+
+def extract_troubleshooting_cases(content):
+    cases = []
+    pattern = re.compile(r"Error\s+([A-Za-z0-9_-]+)\s*:\s*(.+?)(?=(?:\n\s*Error\s+[A-Za-z0-9_-]+\s*:)|\Z)", re.IGNORECASE | re.DOTALL)
+    for code, resolution in pattern.findall(content):
+        lines = [line.strip() for line in resolution.splitlines() if line.strip()]
+        summary = _sanitize_diagram_label(lines[0]) if lines else "Review troubleshooting guidance"
+        cases.append({
+            "code": code,
+            "resolution": summary
+        })
+    return cases
+
+
+def build_workflow_artifact(title, signals):
+    steps = signals.get("step_lines", [])
+    if len(steps) < 2:
+        return None
+
+    mermaid_lines = ["flowchart TD"]
+    plantuml_lines = ["@startuml", "start"]
+    node_ids = []
+
+    for index, step in enumerate(steps):
+        node_id = _build_node_id(index)
+        node_ids.append(node_id)
+        label = _sanitize_diagram_label(step)
+        mermaid_lines.append(f'{node_id}["{ label}"]')
+        plantuml_lines.append(f':{label};')
+
+    # Create individual arrows between steps (not a single flat chain)
+    for i in range(len(node_ids) - 1):
+        mermaid_lines.append(f"{node_ids[i]} --> {node_ids[i+1]}")
+    
+    plantuml_lines.extend(["stop", "@enduml"])
+
+    return {
+        "artifact_type": "workflow",
+        "title": title,
+        "mermaid": "\n".join(mermaid_lines),
+        "plantuml": "\n".join(plantuml_lines),
+        "summary": f"Generated from {len(steps)} procedural steps in the uploaded section."
+    }
+
+
+def build_relationship_artifact(title, content, direction="LR"):
+    relationships = extract_relationship_statements(content)
+
+    if not relationships:
+        nodes = extract_entities(content)
+        fallback_relationships = extract_relationships(nodes)
+        if len(fallback_relationships) < 1:
+            return None
+        relationships = [
+            {"source": src, "label": "connects to", "target": dst}
+            for src, dst in fallback_relationships
+        ]
+
+    resolved_labels = []
+    normalized_relationships = []
+    for relation in relationships:
+        src = _resolve_component_reference(relation["source"], resolved_labels)
+        dst = _resolve_component_reference(relation["target"], resolved_labels)
+        normalized_relationships.append({
+            "source": src,
+            "label": relation["label"],
+            "target": dst
+        })
+        if src not in resolved_labels:
+            resolved_labels.append(src)
+        if dst not in resolved_labels:
+            resolved_labels.append(dst)
+
+    relationships = normalized_relationships
+
+    mermaid_lines = [f"graph {direction}"]
+    plantuml_lines = ["@startuml", "left to right direction"]
+    alias_map = {}
+    node_order = []
+
+    def ensure_alias(label):
+        if label not in alias_map:
+            alias = _build_node_id(len(alias_map))
+            alias_map[label] = alias
+            node_order.append(label)
+        return alias_map[label]
+
+    for relation in relationships:
+        src = relation["source"]
+        dst = relation["target"]
+        label = relation["label"]
+        src_id = ensure_alias(src)
+        dst_id = ensure_alias(dst)
+        mermaid_lines.append(f'{src_id}["{_sanitize_diagram_label(src)}"] -->|{label}| {dst_id}["{_sanitize_diagram_label(dst)}"]')
+
+    for label in node_order:
+        alias = alias_map[label]
+        plantuml_lines.append(f'component "{_sanitize_diagram_label(label)}" as {alias}')
+
+    for relation in relationships:
+        plantuml_lines.append(
+            f'{alias_map[relation["source"]]} --> {alias_map[relation["target"]]} : {relation["label"]}'
+        )
+
+    plantuml_lines.append("@enduml")
+
+    return {
+        "artifact_type": "relationship",
+        "title": title,
+        "nodes": node_order,
+        "relationships": [f'{item["source"]} --{item["label"]}--> {item["target"]}' for item in relationships],
+        "mermaid": "\n".join(mermaid_lines),
+        "plantuml": "\n".join(plantuml_lines),
+        "summary": f"Generated from {len(relationships)} relationships extracted from the uploaded content."
+    }
+
+
+def build_decision_artifact(title, content):
+    decision = extract_decision_logic(content)
+    if not decision:
+        return None
+
+    condition = decision["condition"]
+    yes_action = decision["yes_action"]
+    no_action = decision["no_action"]
+
+    mermaid_lines = [
+        "flowchart TD",
+        'N1["Evaluate Condition"]',
+        f'N2{{"{condition}?"}}',
+        f'N3["{yes_action}"]',
+        f'N4["{no_action}"]',
+        "N1 --> N2",
+        "N2 -->|Yes| N3",
+        "N2 -->|No| N4"
+    ]
+
+    plantuml_lines = [
+        "@startuml",
+        "start",
+        ":Evaluate Condition;",
+        f'if ({condition}?) then (Yes)',
+        f'  :{yes_action};',
+        "else (No)",
+        f'  :{no_action};',
+        "endif",
+        "stop",
+        "@enduml"
+    ]
+
+    return {
+        "artifact_type": "decision",
+        "title": title,
+        "mermaid": "\n".join(mermaid_lines),
+        "plantuml": "\n".join(plantuml_lines),
+        "summary": "Generated from explicit if/otherwise logic in the uploaded content."
+    }
+
+
+def build_troubleshooting_artifact(title, content):
+    cases = extract_troubleshooting_cases(content)
+    if not cases:
+        return None
+
+    mermaid_lines = ["flowchart TD", 'N0["Troubleshooting Entry"]']
+    plantuml_lines = ["@startuml", "left to right direction", 'rectangle "Troubleshooting Entry" as N0']
+
+    for index, case in enumerate(cases, start=1):
+        error_id = f"E{index}"
+        action_id = f"R{index}"
+        error_label = f'Error {case["code"]}'
+        resolution_label = case["resolution"]
+        mermaid_lines.extend([
+            f'{error_id}["{error_label}"]',
+            f'{action_id}["{resolution_label}"]',
+            f'N0 --> {error_id}',
+            f'{error_id} --> {action_id}'
+        ])
+        plantuml_lines.extend([
+            f'rectangle "{error_label}" as {error_id}',
+            f'rectangle "{resolution_label}" as {action_id}',
+            f'N0 --> {error_id}',
+            f'{error_id} --> {action_id}'
+        ])
+
+    plantuml_lines.append("@enduml")
+
+    return {
+        "artifact_type": "troubleshooting",
+        "title": title,
+        "mermaid": "\n".join(mermaid_lines),
+        "plantuml": "\n".join(plantuml_lines),
+        "summary": f"Generated from {len(cases)} troubleshooting cases found in the uploaded content."
+    }
+
+
+def build_generated_artifact(visual_type, title, content, signals, content_type):
+    if content_type == "Troubleshooting":
+        troubleshooting_artifact = build_troubleshooting_artifact(title, content)
+        if troubleshooting_artifact:
+            return troubleshooting_artifact
+
+    if visual_type in {"Workflow Diagram", "Sequence Diagram"}:
+        return build_workflow_artifact(title, signals)
+
+    if visual_type in {"Architecture Diagram", "Topology Diagram", "Data Flow Diagram"}:
+        return build_relationship_artifact(title, content, direction="LR")
+
+    if visual_type in {"Decision Tree", "Flowchart"}:
+        return build_decision_artifact(title, content) or build_workflow_artifact(title, signals)
+
+    return None
 
 
 def compute_signals(content):
@@ -88,23 +441,45 @@ def compute_signals(content):
     }
 
 
+def get_confidence_category(confidence):
+    """Convert numeric confidence (0-100) to categorical (Low/Medium/High)."""
+    if confidence >= 80:
+        return "High"
+    elif confidence >= 50:
+        return "Medium"
+    else:
+        return "Low"
+
+
 def classify_content(title, content, signals):
     title_lower = title.lower()
     content_lower = content.lower()
+    combined = title_lower + " " + content_lower
 
-    if re.search(r"\b(troubleshoot|error|failure|issue|fault)\b", title_lower + " " + content_lower):
-        return "Troubleshooting"
+    classifications = []
+
+    troubleshoot_match = len(re.findall(r"\b(troubleshoot|error|failure|issue|fault)\b", combined))
+    if troubleshoot_match > 0:
+        classifications.append(("Troubleshooting", min(90, 60 + troubleshoot_match * 10)))
 
     if signals["steps"] >= 3 or re.search(r"\b(procedure|steps|how to)\b", title_lower):
-        return "Procedure"
+        procedure_confidence = 95 if signals["steps"] >= 5 else (85 if signals["steps"] >= 3 else 70)
+        classifications.append(("Procedure", procedure_confidence))
+    elif signals["steps"] >= 1:  # If at least 1 step detected, lean toward Procedure
+        classifications.append(("Procedure", 65))
 
-    if re.search(r"\b(topology|architecture|system layout|network|integration)\b", title_lower + " " + content_lower):
-        return "Architecture"
+    arch_match = len(re.findall(r"\b(topology|architecture|system layout|network|integration)\b", combined))
+    if arch_match > 0:
+        classifications.append(("Architecture", min(90, 60 + arch_match * 15)))
 
-    if re.search(r"\b(parameter|field|property|reference|api|table)\b", title_lower + " " + content_lower):
-        return "Reference"
+    if re.search(r"\b(parameter|field|property|reference|api|table)\b", combined):
+        classifications.append(("Reference", 80))
 
-    return "Concept"
+    if not classifications:
+        return ("Concept", 50)
+
+    best = max(classifications, key=lambda x: x[1])
+    return best
 
 
 def complexity_recommendation(signals):
@@ -161,16 +536,20 @@ def suggest_screenshot_placement(signals):
     for index, step in enumerate(steps):
         step_lower = step.lower()
         if any(term in step_lower for term in CHECKPOINT_TERMS):
+            step_truncated = step[:60]
             return {
                 "step_number": index + 1,
-                "step_text": step,
+                "step_text": step_truncated,
+                "display_text": f"After step {index + 1}: {step_truncated}",
                 "reason": "Checkpoint step detected where users need confirmation"
             }
 
     middle = max(1, len(steps) // 2)
+    step_truncated = steps[middle - 1][:60]
     return {
         "step_number": middle,
-        "step_text": steps[middle - 1],
+        "step_text": step_truncated,
+        "display_text": f"After step {middle}: {step_truncated}",
         "reason": "Mid-workflow placement provides orientation in long procedures"
     }
 
@@ -182,13 +561,16 @@ def _normalize_node_id(label):
 def extract_entities(content):
     content_lower = content.lower()
     entities = []
+    seen = set()
     entities_cfg = knowledge_model.get("entities", {})
-    for name, metadata in entities_cfg.items():
+    for canonical, metadata in entities_cfg.items():
         aliases = metadata.get("aliases", [])
         for alias in aliases:
             pattern = r"\b" + re.escape(alias.lower()) + r"\b"
             if re.search(pattern, content_lower):
-                entities.append(name)
+                if canonical not in seen:
+                    entities.append(canonical)
+                    seen.add(canonical)
                 break
     return entities
 
@@ -215,21 +597,14 @@ def extract_relationships(entities):
 
 
 def build_diagram_blueprint(content):
-    nodes = extract_entities(content)
-
-    if len(nodes) < 2:
+    artifact = build_relationship_artifact("Diagram Blueprint", content, direction="LR")
+    if not artifact:
         return None
 
-    relationships = extract_relationships(nodes)
-
-    mermaid_lines = ["graph LR"]
-    for src, dst in relationships:
-        mermaid_lines.append(f"{_normalize_node_id(src)}[{src}] --> {_normalize_node_id(dst)}[{dst}]")
-
     return {
-        "nodes": nodes,
-        "relationships": [f"{src} -> {dst}" for src, dst in relationships],
-        "mermaid": "\n".join(mermaid_lines)
+        "nodes": artifact.get("nodes", []),
+        "relationships": artifact.get("relationships", []),
+        "mermaid": artifact["mermaid"]
     }
 
 
@@ -250,7 +625,8 @@ def apply_gap_analysis(visual_type, existing_assets):
             "family": "other",
             "existing_count": 0,
             "required_count": 1,
-            "gap_message": "Evaluate manually"
+            "gap_message": "Evaluate manually",
+            "coverage_display": "Coverage: 0/1 visuals (0%)"
         }
 
     existing_count = existing_assets.get(family, 0)
@@ -261,11 +637,13 @@ def apply_gap_analysis(visual_type, existing_assets):
     else:
         gap_message = "Additional visual recommended"
 
+    coverage_pct = int((existing_count / required_count * 100)) if required_count > 0 else 0
     return {
         "family": family,
         "existing_count": existing_count,
         "required_count": required_count,
-        "gap_message": gap_message
+        "gap_message": gap_message,
+        "coverage_display": f"Coverage: {existing_count}/{required_count} visuals ({coverage_pct}%)"
     }
 
 
@@ -283,8 +661,10 @@ def build_visual_package(recommendations, signals, placement_hint):
         "reason": "Multiple visual modalities improve comprehension for this section.",
         "score": round(sum(item["score"] for item in filtered[:3]), 1),
         "confidence": package_confidence,
+        "confidence_category": get_confidence_category(package_confidence),
         "priority": package_priority,
         "content_type": filtered[0]["content_type"],
+        "content_type_confidence": filtered[0]["content_type_confidence"],
         "complexity_score": filtered[0]["complexity_score"],
         "evidence": ["Package includes complementary visual types"],
         "rationale": [
@@ -294,8 +674,12 @@ def build_visual_package(recommendations, signals, placement_hint):
         "suggested_content": "Create visuals in this order: " + " -> ".join(package_items) + ".",
         "package_items": package_items,
         "gap_message": "Additional visual package recommended",
+        "gap_coverage": "Coverage: 0/1 visual package (0%)",
+        "existing_count": 0,
+        "required_count": 1,
         "placement_hint": placement_hint if any(item in SCREENSHOT_TYPES.union(GIF_TYPES) for item in package_items) else None,
-        "diagram_blueprint": None
+        "diagram_blueprint": None,
+        "generated_artifact": None
     }
 
 
@@ -330,7 +714,7 @@ def generate_suggested_content(visual_type, title, signals, matched_keywords):
 def detect_visuals(title, content):
     content_lower = content.lower()
     signals = compute_signals(content)
-    content_type = classify_content(title, content, signals)
+    content_type, content_type_confidence = classify_content(title, content, signals)
     complexity_hint = complexity_recommendation(signals)
     existing_assets = detect_existing_visual_assets(content)
     placement_hint = suggest_screenshot_placement(signals)
@@ -402,22 +786,28 @@ def detect_visuals(title, content):
             if confidence < 40:
                 priority = "Low"
 
+        generated_artifact = build_generated_artifact(visual_type, title, content, signals, content_type)
+
         results.append({
             "visual_type": visual_type,
             "reason": rule["reason"],
             "score": round(score, 1),
             "confidence": confidence,
+            "confidence_category": get_confidence_category(confidence),
             "priority": priority,
             "content_type": content_type,
+            "content_type_confidence": content_type_confidence,
             "complexity_score": signals["complexity_score"],
             "evidence": evidence,
             "rationale": rationale,
             "existing_visuals": existing_assets,
             "gap_message": gap["gap_message"],
+            "gap_coverage": gap["coverage_display"],
             "existing_count": gap["existing_count"],
             "required_count": gap["required_count"],
             "placement_hint": placement_hint if visual_type in SCREENSHOT_TYPES.union(GIF_TYPES) else None,
             "diagram_blueprint": diagram_blueprint if visual_type in DIAGRAM_TYPES else None,
+            "generated_artifact": generated_artifact,
             "suggested_content": generate_suggested_content(
                 visual_type,
                 title,
@@ -455,8 +845,10 @@ def detect_visuals(title, content):
             "reason": "No additional visuals needed based on current content and existing visuals",
             "score": 0,
             "confidence": 0,
+            "confidence_category": "Low",
             "priority": "Low",
             "content_type": content_type,
+            "content_type_confidence": content_type_confidence,
             "complexity_score": signals["complexity_score"],
             "evidence": [
                 f"Existing visuals: {existing_assets['total']}"
@@ -468,10 +860,12 @@ def detect_visuals(title, content):
             ],
             "existing_visuals": existing_assets,
             "gap_message": "No additional visuals needed",
+            "gap_coverage": f"Coverage: {existing_assets['total']}/1 visuals (100%)",
             "existing_count": existing_assets["total"],
             "required_count": 1,
             "placement_hint": None,
             "diagram_blueprint": diagram_blueprint,
+            "generated_artifact": None,
             "suggested_content": "Keep text-only unless clarity issues appear during review."
         })
 

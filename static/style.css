@@ -854,6 +854,101 @@ textarea.editor:focus {
     margin-bottom: 0.75rem;
 }
 
+.artifact-box {
+    margin-top: 0.75rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.08), rgba(16, 22, 38, 0.4));
+    border-radius: var(--radius-sm);
+}
+
+.artifact-header {
+    margin-bottom: 0.45rem;
+}
+
+.artifact-summary {
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.8rem;
+}
+
+.artifact-preview-box {
+    padding: 0.8rem;
+    border-radius: var(--radius-sm);
+    background: rgba(7, 10, 19, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 0.8rem;
+}
+
+.artifact-preview-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 0.55rem;
+}
+
+.artifact-mermaid-preview {
+    overflow-x: auto;
+}
+
+.artifact-mermaid-preview svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.artifact-code-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 0.8rem;
+}
+
+.artifact-code-panel {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: rgba(7, 10, 19, 0.78);
+}
+
+.artifact-code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.7rem 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 0.8rem;
+    color: var(--text-primary);
+}
+
+.copy-artifact-btn {
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    background: rgba(59, 130, 246, 0.12);
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.copy-artifact-btn:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.45);
+}
+
+.artifact-code-block {
+    margin: 0;
+    padding: 0.85rem;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    font-family: var(--font-code);
+    font-size: 0.75rem;
+    color: #dbeafe;
+    background: transparent;
+}
+
 .reco-evidence {
     display: flex;
     flex-wrap: wrap;
@@ -1689,3 +1784,415 @@ textarea.editor:focus {
 @keyframes bar-expand {
     to { width: var(--target-w); }
 }
+
+@keyframes pulse-highlight {
+    0% {
+        border-color: rgba(59, 130, 246, 0.3);
+        background: rgba(59, 130, 246, 0.05);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    }
+    50% {
+        border-color: rgba(59, 130, 246, 0.8);
+        background: rgba(59, 130, 246, 0.2);
+        box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+    }
+    100% {
+        border-color: rgba(59, 130, 246, 0.3);
+        background: rgba(59, 130, 246, 0.05);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    }
+}
+
+/* V4 UX Improvements: Collapsible Details, Placement Highlight, Metadata Pills */
+
+/* Detail Panel with Placement Assistance */
+.section-with-placement {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.placement-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1rem;
+    border: 2px dashed rgba(59, 130, 246, 0.3);
+    border-radius: var(--radius-sm);
+    background: rgba(59, 130, 246, 0.05);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.placement-indicator svg {
+    width: 20px;
+    height: 20px;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.placement-indicator:hover {
+    border-color: rgba(59, 130, 246, 0.6);
+    background: rgba(59, 130, 246, 0.12);
+    color: var(--text-primary);
+}
+
+.placement-start {
+    margin-bottom: 1rem;
+}
+
+.placement-end {
+    margin-top: 1rem;
+}
+
+.detail-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+    font-weight: 400;
+}
+
+/* Visual Insert Button */
+.insert-visual-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.2rem;
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    border: none;
+    border-radius: var(--radius-sm);
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-top: 0.75rem;
+}
+
+.insert-visual-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+}
+
+.insert-visual-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.insert-visual-btn.inserted {
+    background: linear-gradient(135deg, var(--accent-emerald), rgba(16, 185, 129, 0.8));
+}
+
+/* Insert Visual Actions Container */
+.insert-visual-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 1.2rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.insert-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.insert-visual-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.7rem 1rem;
+}
+
+/* Placement Recommendation Highlight - Prominent at Top */
+.reco-placement-highlight {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.05));
+    border-left: 3px solid var(--primary);
+    padding: 0.75rem 1rem;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    margin: 0.75rem 0;
+    color: var(--text-primary);
+}
+
+.reco-placement-highlight svg {
+    color: var(--primary);
+    margin-top: 2px;
+}
+
+.placement-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.placement-text {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    margin-top: 0.25rem;
+    font-family: var(--font-code);
+}
+
+/* Top-level Metadata Row */
+.reco-metadata-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+}
+
+.metadata-pill {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    color: var(--text-primary);
+    padding: 0.4rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+
+.metadata-pill:hover {
+    background: rgba(139, 92, 246, 0.25);
+    border-color: rgba(139, 92, 246, 0.5);
+}
+
+.metadata-pill.coverage-pill {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: var(--accent-emerald);
+}
+
+.metadata-pill.coverage-pill:hover {
+    background: rgba(16, 185, 129, 0.25);
+    border-color: rgba(16, 185, 129, 0.5);
+}
+
+/* Simplified Writer-Focused Header */
+.reco-card-header-simple {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 0.6rem;
+}
+
+.reco-card.writer-focused .reco-type-text {
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+/* Why Section - Primary Prompt */
+.reco-why-section {
+    margin-bottom: 1rem;
+}
+
+.reco-why-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+    display: block;
+}
+
+.reco-card.writer-focused .reco-reason {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 0;
+}
+
+/* Hide metadata row - only show in advanced */
+.reco-metadata-row {
+    display: none;
+}
+
+/* Collapsible Details Section (Old Style - Keep for Compatibility) */
+.reco-details-collapsible {
+    margin-top: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.reco-details-toggle {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all var(--transition-fast);
+    text-align: left;
+}
+
+.reco-details-toggle:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+}
+
+.reco-details-toggle svg {
+    transition: transform var(--transition-fast);
+}
+
+.reco-details-toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+}
+
+.reco-details-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-smooth);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.reco-details-toggle[aria-expanded="true"] ~ .reco-details-content {
+    max-height: 500px;
+    padding: 1rem;
+}
+
+/* Advanced Details Collapsible (Writer-Focused) */
+.reco-advanced-collapsible {
+    margin-top: 1rem;
+    margin-top: 1.25rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.reco-advanced-toggle {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all var(--transition-fast);
+    text-align: left;
+}
+
+.reco-advanced-toggle:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+}
+
+.reco-advanced-toggle svg {
+    transition: transform var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.reco-advanced-toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+}
+
+.reco-advanced-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-smooth);
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.reco-advanced-toggle[aria-expanded="true"] ~ .reco-advanced-content {
+    max-height: 1000px;
+    padding: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.advanced-row {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 0.75rem;
+    align-items: center;
+    font-size: 0.85rem;
+    margin-bottom: 0.65rem;
+}
+
+.advanced-label {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.advanced-row span:not(.advanced-label):not(.confidence-dot) {
+    color: var(--text-secondary);
+}
+
+.advanced-section {
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.advanced-section:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.advanced-section-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.evidence-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+/* Confidence Category Colors */
+.confidence-high {
+    background: var(--accent-emerald);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.confidence-medium {
+    background: var(--accent-amber);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.confidence-low {
+    background: var(--accent-rose);
+    box-shadow: 0 0 8px rgba(244, 63, 94, 0.4);
+}
+
+/* Toggle Script - Add to JavaScript */
+/* 
+document.querySelectorAll('.reco-details-toggle').forEach(button => {
+    button.addEventListener('click', () => {
+        const isExpanded = button.getAttribute('aria-expanded') === 'true';
+        button.setAttribute('aria-expanded', !isExpanded);
+    });
+});
+*/

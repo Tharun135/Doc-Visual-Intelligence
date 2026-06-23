@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initResultsPanel();
     initGifTimelines();
     initFormLoading();
+    initArtifactTools();
+    initInsertButtons();
 });
 
 // Sample text templates mapping
@@ -343,3 +345,164 @@ function initGifTimelines() {
         }, 1500);
     });
 }
+
+
+// Collapsible Details Toggle for Recommendation Cards
+function initDetailsToggle() {
+    // Handle old details toggle
+    document.querySelectorAll('.reco-details-toggle').forEach(button => {
+        if (button.dataset.bound === 'true') {
+            return;
+        }
+        button.dataset.bound = 'true';
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const isExpanded = this.getAttribute('aria-expanded') === 'true';
+            this.setAttribute('aria-expanded', !isExpanded);
+            
+            const content = this.nextElementSibling;
+            if (content && content.classList.contains('reco-details-content')) {
+                if (isExpanded) {
+                    content.style.maxHeight = '0';
+                } else {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                }
+            }
+        });
+    });
+    
+    // Handle new advanced toggle (writer-focused)
+    document.querySelectorAll('.reco-advanced-toggle').forEach(button => {
+        if (button.dataset.bound === 'true') {
+            return;
+        }
+        button.dataset.bound = 'true';
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const isExpanded = this.getAttribute('aria-expanded') === 'true';
+            this.setAttribute('aria-expanded', !isExpanded);
+            
+            const content = this.nextElementSibling;
+            if (content && content.classList.contains('reco-advanced-content')) {
+                if (isExpanded) {
+                    content.style.maxHeight = '0';
+                } else {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                }
+            }
+        });
+    });
+}
+
+
+function initArtifactTools() {
+    document.querySelectorAll('.copy-artifact-btn').forEach(button => {
+        if (button.dataset.bound === 'true') {
+            return;
+        }
+        button.dataset.bound = 'true';
+        button.addEventListener('click', async () => {
+            const targetId = button.dataset.copyTarget;
+            const target = document.getElementById(targetId);
+            if (!target) {
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(target.textContent.trim());
+                const original = button.textContent;
+                button.textContent = 'Copied';
+                window.setTimeout(() => {
+                    button.textContent = original;
+                }, 1200);
+            } catch (error) {
+                button.textContent = 'Unavailable';
+            }
+        });
+    });
+
+    if (window.mermaid) {
+        window.mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: 'loose',
+            theme: 'dark'
+        });
+        document.querySelectorAll('.artifact-mermaid-preview').forEach((preview, index) => {
+            if (preview.dataset.rendered === 'true') {
+                return;
+            }
+            preview.dataset.rendered = 'true';
+            const source = preview.textContent;
+            window.mermaid.render(`artifact-preview-${index}`, source).then(({ svg }) => {
+                preview.innerHTML = svg;
+            }).catch(() => {
+                preview.textContent = source;
+            });
+        });
+    }
+}
+
+// Insert Button Handler - Visual placement tracking
+function initInsertButtons() {
+    document.querySelectorAll('.insert-at-placement').forEach(button => {
+        if (button.dataset.bound === 'true') {
+            return;
+        }
+        button.dataset.bound = 'true';
+        button.addEventListener('click', () => {
+            const placement = button.dataset.placement;
+            const card = button.closest('.reco-card');
+            const detailPanel = button.closest('.detail-panel');
+            const visualType = card.querySelector('.reco-type-text')?.textContent || 'Visual';
+            
+            if (!detailPanel) return;
+            
+            // Highlight placement zone
+            const placementIndicator = detailPanel.querySelector(
+                placement === 'before' ? '.placement-start' : 
+                placement === 'after' ? '.placement-end' : 
+                '.placement-start'
+            );
+            
+            if (placementIndicator) {
+                // Add highlight effect
+                placementIndicator.style.animation = 'none';
+                setTimeout(() => {
+                    placementIndicator.style.animation = 'pulse-highlight 0.6s ease-out';
+                }, 10);
+                
+                // Scroll into view
+                placementIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            
+            // Update button state
+            button.classList.add('inserted');
+            const original = button.textContent;
+            button.textContent = '✓ Inserted';
+            
+            setTimeout(() => {
+                button.textContent = original;
+                button.classList.remove('inserted');
+            }, 2000);
+        });
+    });
+}
+
+// Call toggle init after results are loaded
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initDetailsToggle, 100);
+    setTimeout(initArtifactTools, 100);
+    setTimeout(initInsertButtons, 100);
+});
+
+// Also reinit when results are refreshed
+const observer = new MutationObserver(() => {
+    initDetailsToggle();
+    initArtifactTools();
+    initInsertButtons();
+});
+
+observer.observe(document.body, {
+    childList: true,
+    subtree: true
+});

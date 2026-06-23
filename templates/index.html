@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Documentation Visualization Assistant - Analyze Visual Opportunities</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 </head>
 <body>
 
@@ -207,16 +208,39 @@
                                 <div class="detail-panel" id="detail-{{ loop.index0 }}">
                                     <div class="detail-header">
                                         <h3 class="detail-title">{{ result.title }}</h3>
+                                        <p class="detail-subtitle">Section with {{ result.suggestions | length }} visual recommendation{{ result.suggestions | length != 1 and 's' or '' }}</p>
                                     </div>
                                     
-                                    <!-- Highlightable Source Code Box -->
-                                    <div class="section-content-box">{{ result.content }}</div>
+                                    <!-- SECTION CONTENT WITH INSERTION POINTS -->
+                                    <div class="section-with-placement">
+                                        <div class="placement-indicator placement-start">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                <polyline points="5 12 12 19 19 12"></polyline>
+                                            </svg>
+                                            <span>Insert visual before this section</span>
+                                        </div>
+                                        
+                                        <!-- Highlightable Source Code Box -->
+                                        <div class="section-content-box">{{ result.content }}</div>
+                                        
+                                        <div class="placement-indicator placement-end">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                <polyline points="5 12 12 19 19 12"></polyline>
+                                            </svg>
+                                            <span>Insert visual after this section</span>
+                                        </div>
+                                    </div>
 
                                     <!-- Recommendations Cards List -->
                                     <div class="reco-list">
+                                        {% set result_index = loop.index0 %}
                                         {% for suggestion in result.suggestions %}
-                                            <div class="reco-card">
-                                                <div class="reco-card-header">
+                                            {% set artifact_id = 'artifact-' ~ result_index ~ '-' ~ loop.index0 %}
+                                            <div class="reco-card writer-focused">
+                                                <!-- HEADER: Visual Type Only -->
+                                                <div class="reco-card-header-simple">
                                                     <div class="reco-type-container">
                                                         <div class="reco-icon-wrapper {% if suggestion.visual_type == 'Flowchart' %}reco-flowchart{% elif suggestion.visual_type in ['Screenshot', 'Configuration Screenshot'] %}reco-screenshot{% elif suggestion.visual_type in ['Architecture Diagram', 'Topology Diagram', 'Data Flow Diagram'] %}reco-architecture{% elif suggestion.visual_type == 'Decision Tree' %}reco-decision{% elif suggestion.visual_type == 'Illustration' %}reco-illustration{% elif suggestion.visual_type in ['Workflow Diagram', 'Sequence Diagram'] %}reco-workflow{% elif suggestion.visual_type in ['Code Example', 'Mapping Table'] %}reco-code{% elif suggestion.visual_type in ['Visual Summary', 'Before/After Comparison'] %}reco-summary{% elif suggestion.visual_type == 'GIF Tutorial' %}reco-gif{% else %}reco-none{% endif %}">
                                                             {% if suggestion.visual_type == 'Flowchart' %}
@@ -243,53 +267,81 @@
                                                         </div>
                                                         <span class="reco-type-text">{{ suggestion.visual_type }}</span>
                                                     </div>
-                                                    
-                                                    <!-- Confidence pill -->
-                                                    <div class="reco-confidence-pill">
-                                                        <span class="confidence-dot {% if suggestion.confidence >= 75 %}confidence-high{% elif suggestion.confidence >= 40 %}confidence-medium{% else %}confidence-low{% endif %}"></span>
-                                                        <span>Confidence: {{ suggestion.confidence }}%</span>
-                                                    </div>
                                                 </div>
 
-                                                <p class="reco-reason">{{ suggestion.reason }}</p>
-
-                                                <div class="reco-evidence" style="margin-top: 0.55rem;">
-                                                    <span class="evidence-title">Priority:</span>
-                                                    <span class="evidence-pill">{{ suggestion.priority }}</span>
-                                                    <span class="evidence-title">Content Type:</span>
-                                                    <span class="evidence-pill">{{ suggestion.content_type }}</span>
-                                                    <span class="evidence-title">Complexity:</span>
-                                                    <span class="evidence-pill">{{ suggestion.complexity_score }}</span>
+                                                <!-- WHY: Reason (PRIMARY) -->
+                                                <div class="reco-why-section">
+                                                    <div class="reco-why-label">Why</div>
+                                                    <p class="reco-reason">{{ suggestion.reason }}</p>
                                                 </div>
 
-                                                {% if suggestion.gap_message %}
-                                                    <div class="reco-evidence" style="margin-top: 0.55rem;">
-                                                        <span class="evidence-title">Visual Gap:</span>
-                                                        <span class="evidence-pill">{{ suggestion.gap_message }}</span>
-                                                        <span class="evidence-title">Existing:</span>
-                                                        <span class="evidence-pill">{{ suggestion.existing_count }}</span>
-                                                        <span class="evidence-title">Target:</span>
-                                                        <span class="evidence-pill">{{ suggestion.required_count }}</span>
+                                                <!-- Placement recommendation (prominent for procedural content) -->
+                                                {% if suggestion.placement_hint %}
+                                                    <div class="reco-placement-highlight">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; flex-shrink: 0;">
+                                                            <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+                                                        </svg>
+                                                        <div>
+                                                            <div class="placement-label">Recommended placement</div>
+                                                            <div class="placement-text">{{ suggestion.placement_hint.display_text }}</div>
+                                                        </div>
                                                     </div>
                                                 {% endif %}
 
-                                                {% if suggestion.evidence %}
-                                                    <div class="reco-evidence">
-                                                        <span class="evidence-title">Detection Evidence:</span>
-                                                        {% for item in suggestion.evidence %}
-                                                            <span class="evidence-pill">{{ item }}</span>
-                                                        {% endfor %}
-                                                    </div>
-                                                {% endif %}
+                                                <!-- HIDDEN BY DEFAULT: Advanced technical details -->
+                                                <div class="reco-advanced-collapsible">
+                                                    <button class="reco-advanced-toggle" type="button" aria-expanded="false">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                                        </svg>
+                                                        <span>Advanced Details</span>
+                                                    </button>
+                                                    <div class="reco-advanced-content">
+                                                        <!-- Confidence & Classification -->
+                                                        <div class="advanced-row">
+                                                            <span class="advanced-label">Confidence:</span>
+                                                            <span class="confidence-dot {% if suggestion.confidence_category == 'High' %}confidence-high{% elif suggestion.confidence_category == 'Medium' %}confidence-medium{% else %}confidence-low{% endif %}"></span>
+                                                            <span>{{ suggestion.confidence_category }} ({{ suggestion.confidence }}%)</span>
+                                                        </div>
+                                                        <div class="advanced-row">
+                                                            <span class="advanced-label">Priority:</span>
+                                                            <span>{{ suggestion.priority }}</span>
+                                                        </div>
+                                                        <div class="advanced-row">
+                                                            <span class="advanced-label">Classification:</span>
+                                                            <span>{{ suggestion.content_type }} ({{ suggestion.content_type_confidence }}%)</span>
+                                                        </div>
+                                                        {% if suggestion.gap_coverage %}
+                                                            <div class="advanced-row">
+                                                                <span class="advanced-label">Coverage:</span>
+                                                                <span>{{ suggestion.gap_coverage }}</span>
+                                                            </div>
+                                                        {% endif %}
 
-                                                {% if suggestion.rationale %}
-                                                    <div class="reco-evidence" style="margin-top: 0.55rem;">
-                                                        <span class="evidence-title">Reason:</span>
-                                                        {% for item in suggestion.rationale %}
-                                                            <span class="evidence-pill">{{ item }}</span>
-                                                        {% endfor %}
+                                                        <!-- Detection Evidence -->
+                                                        {% if suggestion.evidence %}
+                                                            <div class="advanced-section">
+                                                                <div class="advanced-section-title">Detection Evidence:</div>
+                                                                <div class="evidence-pills">
+                                                                    {% for item in suggestion.evidence %}
+                                                                        <span class="evidence-pill">{{ item }}</span>
+                                                                    {% endfor %}
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        {% if suggestion.rationale %}
+                                                            <div class="advanced-section">
+                                                                <div class="advanced-section-title">Analysis:</div>
+                                                                <div class="evidence-pills">
+                                                                    {% for item in suggestion.rationale %}
+                                                                        <span class="evidence-pill">{{ item }}</span>
+                                                                    {% endfor %}
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
                                                     </div>
-                                                {% endif %}
+                                                </div>
 
                                                 {% if suggestion.suggested_content %}
                                                     <div class="simulator-box" style="padding: 0.8rem 1rem; margin-top: 0.65rem;">
@@ -301,13 +353,61 @@
                                                     </div>
                                                 {% endif %}
 
-                                                {% if suggestion.placement_hint %}
-                                                    <div class="simulator-box" style="padding: 0.8rem 1rem; margin-top: 0.65rem;">
-                                                        <div class="sim-label" style="margin-bottom: 0.4rem;">
-                                                            <span>Placement Recommendation</span>
-                                                            <span class="status">Step {{ suggestion.placement_hint.step_number }}</span>
+                                                {% if suggestion.generated_artifact %}
+                                                    <div class="artifact-box">
+                                                        <div class="sim-label artifact-header">
+                                                            <span>Generated Visual Artifact</span>
+                                                            <span class="status">Content-Driven</span>
                                                         </div>
-                                                        <p class="reco-reason" style="margin: 0; color: var(--text-secondary);">Insert visual after step {{ suggestion.placement_hint.step_number }}: {{ suggestion.placement_hint.step_text }}</p>
+                                                        <p class="artifact-summary">{{ suggestion.generated_artifact.summary }}</p>
+                                                        <div class="artifact-preview-box">
+                                                            <div class="artifact-preview-label">Rendered Preview</div>
+                                                            <div class="mermaid artifact-mermaid-preview">{{ suggestion.generated_artifact.mermaid }}</div>
+                                                        </div>
+                                                        <div class="artifact-code-grid">
+                                                            <div class="artifact-code-panel">
+                                                                <div class="artifact-code-header">
+                                                                    <span>Generated Mermaid</span>
+                                                                    <button type="button" class="copy-artifact-btn" data-copy-target="{{ artifact_id }}-mermaid">Copy</button>
+                                                                </div>
+                                                                <pre id="{{ artifact_id }}-mermaid" class="artifact-code-block">{{ suggestion.generated_artifact.mermaid }}</pre>
+                                                            </div>
+                                                            <div class="artifact-code-panel">
+                                                                <div class="artifact-code-header">
+                                                                    <span>Generated PlantUML</span>
+                                                                    <button type="button" class="copy-artifact-btn" data-copy-target="{{ artifact_id }}-plantuml">Copy</button>
+                                                                </div>
+                                                                <pre id="{{ artifact_id }}-plantuml" class="artifact-code-block">{{ suggestion.generated_artifact.plantuml }}</pre>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- INSERT VISUAL ACTIONS -->
+                                                        <div class="insert-visual-actions">
+                                                            <div class="insert-label">Insert this visual:</div>
+                                                            {% if suggestion.placement_hint %}
+                                                                <button type="button" class="insert-visual-btn insert-at-placement" data-placement="recommended">
+                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                                                        <polyline points="7 12 19 12"></polyline>
+                                                                    </svg>
+                                                                    Insert at recommended location
+                                                                </button>
+                                                            {% endif %}
+                                                            <button type="button" class="insert-visual-btn insert-at-placement" data-placement="before">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                                    <polyline points="5 12 12 5 19 12"></polyline>
+                                                                </svg>
+                                                                Insert before section
+                                                            </button>
+                                                            <button type="button" class="insert-visual-btn insert-at-placement" data-placement="after">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                                    <polyline points="5 12 12 19 19 12"></polyline>
+                                                                </svg>
+                                                                Insert after section
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 {% endif %}
 
@@ -332,13 +432,13 @@
                                                             <span class="status">Mermaid Ready</span>
                                                         </div>
                                                         <div class="reco-evidence" style="margin-top: 0;">
-                                                            <span class="evidence-title">Nodes:</span>
+                                                            <span class="evidence-title">System Components:</span>
                                                             {% for node in suggestion.diagram_blueprint.nodes %}
                                                                 <span class="evidence-pill">{{ node }}</span>
                                                             {% endfor %}
                                                         </div>
                                                         <div class="reco-evidence" style="margin-top: 0.45rem;">
-                                                            <span class="evidence-title">Relationships:</span>
+                                                            <span class="evidence-title">Connections:</span>
                                                             {% for relation in suggestion.diagram_blueprint.relationships %}
                                                                 <span class="evidence-pill">{{ relation }}</span>
                                                             {% endfor %}
@@ -350,7 +450,7 @@
                                                 <!-- ==========================================
                                                      INTERACTIVE SIMULATED MOCKUPS
                                                      ========================================== -->
-                                                {% if suggestion.visual_type == "Flowchart" %}
+                                                {% if suggestion.visual_type == "Flowchart" and not suggestion.generated_artifact %}
                                                     <div class="simulator-box">
                                                         <div class="sim-label">
                                                             <span>Flowchart Simulator</span>
@@ -455,7 +555,7 @@
                                                             <div class="gif-status-pill">SCREEN RECORDING</div>
                                                         </div>
                                                     </div>
-                                                {% elif suggestion.visual_type == "Architecture Diagram" %}
+                                                {% elif suggestion.visual_type == "Architecture Diagram" and not suggestion.generated_artifact %}
                                                     <div class="simulator-box">
                                                         <div class="sim-label">
                                                             <span>System Architecture Nodes</span>
@@ -485,7 +585,7 @@
                                                             </div>
                                                         </div>
                                                     </div>
-                                                {% elif suggestion.visual_type == "Decision Tree" %}
+                                                {% elif suggestion.visual_type == "Decision Tree" and not suggestion.generated_artifact %}
                                                     <div class="simulator-box">
                                                         <div class="sim-label">
                                                             <span>Decision Logic Tree</span>
@@ -522,7 +622,7 @@
                                                             <div class="illustration-label-callout pos-right">Power socket</div>
                                                         </div>
                                                     </div>
-                                                {% elif suggestion.visual_type == "Workflow Diagram" %}
+                                                {% elif suggestion.visual_type == "Workflow Diagram" and not suggestion.generated_artifact %}
                                                     <div class="simulator-box">
                                                         <div class="sim-label">
                                                             <span>Workflow Exchange Diagram</span>

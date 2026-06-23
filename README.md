@@ -23,10 +23,13 @@ A Flask web application that analyzes technical documents and recommends where t
 - Produces multi-visual package recommendations when a section benefits from more than one visual type.
 - Extracts nodes and relationships for architecture and topology sections and outputs Mermaid-ready graph text.
 
-## Version 4 Foundation
+## Version 4: Entity Normalization
 
-- Introduces a knowledge model in `rules/knowledge_model.json` with entities and relationships.
-- Uses entity and relationship extraction for diagram blueprint generation instead of hardcoded node matching.
+- Introduces a knowledge model in `rules/knowledge_model.json` with canonicalized entities and comprehensive aliases.
+- Maps synonyms ("CPU", "S7-1500", "microcontroller") to canonical names ("Controller") to prevent graph fragmentation.
+- Generic entity types (device, application, runtime, network_component, interface, system, external_system) work across any technical domain.
+- Uses entity and relationship extraction for diagram blueprint generation instead of hardcoded patterns.
+- Exposes content-type classification confidence (e.g., "Procedure (95%)") so users can identify ambiguous sections.
 
 ## Project Structure
 
