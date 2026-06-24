@@ -758,6 +758,70 @@ textarea.editor:focus {
     font-weight: 500;
 }
 
+/* Placement highlight: matched step line */
+.content-step-highlight {
+    display: block;
+    background: rgba(59, 130, 246, 0.15);
+    border-left: 3px solid var(--primary);
+    color: var(--text-primary);
+    padding: 2px 6px;
+    border-radius: 0 4px 4px 0;
+    font-weight: 500;
+}
+
+/* Placement highlight: insertion point marker */
+.content-insert-marker {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin: 2px 0;
+}
+
+.content-insert-before {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1.5px dashed var(--accent-emerald);
+    color: var(--accent-emerald);
+}
+
+.content-insert-after-step {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1.5px dashed var(--primary);
+    color: var(--primary);
+    white-space: pre;
+}
+
+/* Show in text button */
+.show-in-text-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.08);
+    color: var(--primary);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.show-in-text-btn:hover {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.6);
+}
+
+.show-in-text-btn.show-in-text-active {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: var(--accent-emerald);
+    color: var(--accent-emerald);
+}
+
 /* Recommendation Cards */
 .reco-list {
     display: flex;
@@ -860,6 +924,10 @@ textarea.editor:focus {
     border: 1px solid rgba(59, 130, 246, 0.22);
     background: linear-gradient(180deg, rgba(59, 130, 246, 0.08), rgba(16, 22, 38, 0.4));
     border-radius: var(--radius-sm);
+}
+
+.artifact-hidden {
+    display: none;
 }
 
 .artifact-header {

@@ -428,6 +428,9 @@ function initArtifactTools() {
             theme: 'dark'
         });
         document.querySelectorAll('.artifact-mermaid-preview').forEach((preview, index) => {
+            if (preview.closest('.artifact-hidden')) {
+                return;
+            }
             if (preview.dataset.rendered === 'true') {
                 return;
             }
@@ -440,6 +443,147 @@ function initArtifactTools() {
             });
         });
     }
+}
+
+function renderMermaidInContainer(container) {
+    if (!window.mermaid || !container) {
+        return;
+    }
+
+    container.querySelectorAll('.artifact-mermaid-preview').forEach((preview, index) => {
+        if (preview.dataset.rendered === 'true') {
+            return;
+        }
+        preview.dataset.rendered = 'true';
+        const source = preview.textContent;
+        window.mermaid.render(`artifact-preview-generated-${Date.now()}-${index}`, source).then(({ svg }) => {
+            preview.innerHTML = svg;
+        }).catch(() => {
+            preview.textContent = source;
+        });
+    });
+}
+
+function initGenerateArtifactButtons() {
+    document.querySelectorAll('.generate-artifact-btn').forEach(button => {
+        if (button.dataset.bound === 'true') {
+            return;
+        }
+        button.dataset.bound = 'true';
+
+        button.addEventListener('click', () => {
+            const targetId = button.dataset.targetId;
+            const artifactContainer = targetId ? document.getElementById(targetId) : null;
+            if (!artifactContainer) {
+                return;
+            }
+
+            artifactContainer.classList.remove('artifact-hidden');
+            renderMermaidInContainer(artifactContainer);
+
+            button.classList.add('inserted');
+            button.textContent = '✓ Generated';
+        });
+    });
+}
+
+// Placement highlight: "Show in text" button handler
+function initPlacementHighlight() {
+    document.querySelectorAll('.show-in-text-btn').forEach(button => {
+        if (button.dataset.bound === 'true') return;
+        button.dataset.bound = 'true';
+
+        button.addEventListener('click', () => {
+            const card = button.closest('.reco-card');
+            const detailPanel = button.closest('.detail-panel');
+            if (!card || !detailPanel) return;
+
+            const contentBox = detailPanel.querySelector('.section-content-box');
+            if (!contentBox) return;
+
+            // Save original text once
+            if (!contentBox.dataset.rawText) {
+                contentBox.dataset.rawText = contentBox.textContent;
+            }
+
+            const stepLines = JSON.parse(detailPanel.dataset.stepLines || '[]');
+            const placementType = card.dataset.placementType;
+            const stepNumber = parseInt(card.dataset.placementStep || '0', 10);
+
+            // Clear any existing highlights first
+            clearContentHighlight(detailPanel);
+
+            buildContentHighlight(contentBox, stepLines, placementType, stepNumber);
+
+            // Scroll the content box into view
+            contentBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            // Toggle button state
+            button.classList.add('show-in-text-active');
+            button.textContent = '✓ Shown';
+            setTimeout(() => {
+                button.classList.remove('show-in-text-active');
+                button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> Show in text';
+            }, 3000);
+        });
+    });
+}
+
+function clearContentHighlight(detailPanel) {
+    const contentBox = detailPanel.querySelector('.section-content-box');
+    if (!contentBox || !contentBox.dataset.rawText) return;
+    contentBox.textContent = contentBox.dataset.rawText;
+}
+
+function buildContentHighlight(contentBox, stepLines, placementType, stepNumber) {
+    const rawText = contentBox.dataset.rawText || contentBox.textContent;
+    const rawLines = rawText.split('\n');
+
+    contentBox.innerHTML = '';
+
+    if (placementType === 'before_section') {
+        // Insert a marker before all content
+        const marker = document.createElement('span');
+        marker.className = 'content-insert-marker content-insert-before';
+        marker.textContent = '▼ Insert diagram here (before procedure starts)';
+        contentBox.appendChild(marker);
+        contentBox.appendChild(document.createTextNode('\n'));
+        rawLines.forEach((line, i) => {
+            contentBox.appendChild(document.createTextNode(line));
+            if (i < rawLines.length - 1) contentBox.appendChild(document.createTextNode('\n'));
+        });
+        marker.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+    }
+
+    if (placementType === 'after_step' && stepNumber > 0 && stepLines.length >= stepNumber) {
+        const targetText = stepLines[stepNumber - 1].substring(0, 40).toLowerCase();
+        let matchIndex = rawLines.findIndex(line => line.toLowerCase().includes(targetText));
+
+        rawLines.forEach((line, i) => {
+            if (i === matchIndex) {
+                const stepEl = document.createElement('span');
+                stepEl.className = 'content-step-highlight';
+                stepEl.textContent = line;
+                contentBox.appendChild(stepEl);
+
+                const markerEl = document.createElement('span');
+                markerEl.className = 'content-insert-marker content-insert-after-step';
+                markerEl.textContent = '\n▼ Insert screenshot here';
+                contentBox.appendChild(markerEl);
+            } else {
+                contentBox.appendChild(document.createTextNode(line));
+            }
+            if (i < rawLines.length - 1) contentBox.appendChild(document.createTextNode('\n'));
+        });
+
+        const highlight = contentBox.querySelector('.content-step-highlight');
+        if (highlight) highlight.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+    }
+
+    // Fallback: restore plain text
+    contentBox.textContent = rawText;
 }
 
 // Insert Button Handler - Visual placement tracking
@@ -492,14 +636,18 @@ function initInsertButtons() {
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(initDetailsToggle, 100);
     setTimeout(initArtifactTools, 100);
+    setTimeout(initGenerateArtifactButtons, 100);
     setTimeout(initInsertButtons, 100);
+    setTimeout(initPlacementHighlight, 100);
 });
 
 // Also reinit when results are refreshed
 const observer = new MutationObserver(() => {
     initDetailsToggle();
     initArtifactTools();
+    initGenerateArtifactButtons();
     initInsertButtons();
+    initPlacementHighlight();
 });
 
 observer.observe(document.body, {

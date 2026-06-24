@@ -12,11 +12,17 @@ with open("rules/knowledge_model.json", "r", encoding="utf-8") as file:
 ACTION_VERBS = {
     "open", "click", "select", "choose", "validate", "start", "verify",
     "check", "configure", "deploy", "save", "run", "import", "export",
-    "upload", "download", "add", "remove", "connect", "set", "enter"
+    "upload", "download", "add", "remove", "connect", "set", "enter",
+    "create", "transform", "return", "complete"
 }
 
 CHECKPOINT_TERMS = {
     "validate", "verify", "confirm", "review", "save", "apply", "test", "status"
+}
+
+UI_INTERACTION_TERMS = {
+    "open", "click", "select", "choose", "enter", "upload", "download", "navigate",
+    "set", "configure", "connect", "import", "export", "save", "apply"
 }
 
 SCREENSHOT_TYPES = {"Screenshot", "Configuration Screenshot"}
@@ -33,6 +39,7 @@ DIAGRAM_TYPES = {
 }
 
 GIF_TYPES = {"GIF Tutorial"}
+RELATIONSHIP_REQUIRED_VISUALS = {"Architecture Diagram", "Topology Diagram", "Data Flow Diagram"}
 
 RELATION_PATTERNS = [
     (r"(?P<src>.+?)\s+sends\s+(?:data\s+)?to\s+(?P<dst>.+)", "sends"),
@@ -415,6 +422,7 @@ def compute_signals(content):
     prerequisites = _count_pattern(content, r"\b(prerequisite|requirement|before you begin|precondition)\b")
     verifications = _count_pattern(content, r"\b(verify|validation|validate|check status|confirm)\b")
     ui_interactions = _count_pattern(content, r"\b(click|select|menu|dialog|tab|button|panel)\b")
+    action_verbs = _count_pattern(content, r"\b(open|click|select|choose|validate|start|verify|check|configure|deploy|save|run|import|export|upload|download|add|remove|connect|set|enter|create|transform|return|complete)\b")
     word_count = len(content.split())
 
     complexity_score = (
@@ -436,6 +444,7 @@ def compute_signals(content):
         "prerequisites": prerequisites,
         "verifications": verifications,
         "ui_interactions": ui_interactions,
+        "action_verbs": action_verbs,
         "word_count": word_count,
         "complexity_score": round(complexity_score, 1)
     }
@@ -465,6 +474,8 @@ def classify_content(title, content, signals):
     if signals["steps"] >= 3 or re.search(r"\b(procedure|steps|how to)\b", title_lower):
         procedure_confidence = 95 if signals["steps"] >= 5 else (85 if signals["steps"] >= 3 else 70)
         classifications.append(("Procedure", procedure_confidence))
+    elif signals["action_verbs"] >= 3:
+        classifications.append(("Procedure", 75))
     elif signals["steps"] >= 1:  # If at least 1 step detected, lean toward Procedure
         classifications.append(("Procedure", 65))
 
@@ -501,6 +512,23 @@ def build_priority(confidence, signals):
     return "Low"
 
 
+def select_final_recommendations(candidates, signals, content_type):
+    if not candidates:
+        return []
+
+    ranked = sorted(candidates, key=lambda item: (item["confidence"], item["score"]), reverse=True)
+
+    # For overview-style concept/reference sections, return a single best visual.
+    if content_type in {"Concept", "Reference"} and signals["steps"] <= 2 and signals["complexity_score"] <= 5:
+        return ranked[:1]
+
+    # If confidence drops sharply after the first recommendation, keep only the primary one.
+    if len(ranked) >= 2 and ranked[0]["confidence"] - ranked[1]["confidence"] >= 20:
+        return ranked[:1]
+
+    return ranked[:3]
+
+
 def _keyword_hits(content_lower, keyword):
     keyword_lower = keyword.lower()
     if " " in keyword_lower:
@@ -532,12 +560,26 @@ def suggest_screenshot_placement(signals):
     if not steps:
         return None
 
+    # Screenshot guidance is strongest immediately after a concrete UI interaction.
+    for index, step in enumerate(steps):
+        step_lower = step.lower()
+        if any(term in step_lower for term in UI_INTERACTION_TERMS):
+            step_truncated = step[:60]
+            return {
+                "placement": "after_step",
+                "step_number": index + 1,
+                "step_text": step_truncated,
+                "display_text": f"After step {index + 1}: {step_truncated}",
+                "reason": "UI interaction step detected where visual confirmation is most useful"
+            }
+
     # Place visuals where users need a confidence checkpoint (validation/verification/save).
     for index, step in enumerate(steps):
         step_lower = step.lower()
         if any(term in step_lower for term in CHECKPOINT_TERMS):
             step_truncated = step[:60]
             return {
+                "placement": "after_step",
                 "step_number": index + 1,
                 "step_text": step_truncated,
                 "display_text": f"After step {index + 1}: {step_truncated}",
@@ -547,11 +589,30 @@ def suggest_screenshot_placement(signals):
     middle = max(1, len(steps) // 2)
     step_truncated = steps[middle - 1][:60]
     return {
+        "placement": "after_step",
         "step_number": middle,
         "step_text": step_truncated,
         "display_text": f"After step {middle}: {step_truncated}",
         "reason": "Mid-workflow placement provides orientation in long procedures"
     }
+
+
+def suggest_diagram_placement(visual_type, content_type):
+    if visual_type in DIAGRAM_TYPES and content_type in {"Concept", "Architecture", "Reference", "Procedure"}:
+        return {
+            "placement": "before_section",
+            "step_number": 0,
+            "display_text": "Before the procedure steps (context first)",
+            "reason": "Diagram provides system context before users start the workflow"
+        }
+    return None
+
+
+def suggest_visual_placement(visual_type, content_type, signals):
+    if visual_type in SCREENSHOT_TYPES.union(GIF_TYPES):
+        return suggest_screenshot_placement(signals)
+
+    return suggest_diagram_placement(visual_type, content_type)
 
 
 def _normalize_node_id(label):
@@ -647,14 +708,30 @@ def apply_gap_analysis(visual_type, existing_assets):
     }
 
 
-def build_visual_package(recommendations, signals, placement_hint):
-    filtered = [item for item in recommendations if item["visual_type"] != "No recommendation" and item["confidence"] >= 45]
+def build_visual_package(recommendations, signals, content_type):
+    # Exclude already-covered visual types from package composition.
+    filtered = [
+        item for item in recommendations
+        if item["visual_type"] != "No recommendation"
+        and item["confidence"] >= 45
+        and item.get("gap_message") != "No additional visuals needed"
+    ]
     if len(filtered) < 2:
         return None
 
     package_items = [item["visual_type"] for item in filtered[:3]]
     package_priority = "High" if signals["steps"] >= 6 or any(item["priority"] == "High" for item in filtered[:3]) else "Medium"
     package_confidence = min(95, int(sum(item["confidence"] for item in filtered[:3]) / min(3, len(filtered)) + 10))
+
+    package_placement_hint = None
+    if any(item in SCREENSHOT_TYPES.union(GIF_TYPES) for item in package_items):
+        package_placement_hint = suggest_screenshot_placement(signals)
+    elif any(item in DIAGRAM_TYPES for item in package_items):
+        package_placement_hint = {
+            "placement": "before_section",
+            "display_text": "Before the procedure steps (context first)",
+            "reason": "Start with context visuals, then proceed with configuration steps"
+        }
 
     return {
         "visual_type": "Visual Package",
@@ -677,7 +754,7 @@ def build_visual_package(recommendations, signals, placement_hint):
         "gap_coverage": "Coverage: 0/1 visual package (0%)",
         "existing_count": 0,
         "required_count": 1,
-        "placement_hint": placement_hint if any(item in SCREENSHOT_TYPES.union(GIF_TYPES) for item in package_items) else None,
+        "placement_hint": package_placement_hint,
         "diagram_blueprint": None,
         "generated_artifact": None
     }
@@ -717,7 +794,7 @@ def detect_visuals(title, content):
     content_type, content_type_confidence = classify_content(title, content, signals)
     complexity_hint = complexity_recommendation(signals)
     existing_assets = detect_existing_visual_assets(content)
-    placement_hint = suggest_screenshot_placement(signals)
+    relationship_count = len(extract_relationship_statements(content))
     diagram_blueprint = build_diagram_blueprint(content)
     results = []
 
@@ -726,6 +803,28 @@ def detect_visuals(title, content):
         score = 0.0
         evidence = []
         matched_keywords = []
+        has_trigger = False
+        relax_min_steps = False
+
+        min_steps = rule.get("min_steps")
+        if min_steps and signals["steps"] < min_steps:
+            if visual_type == "Configuration Screenshot" and content_type in {"Concept", "Reference"}:
+                ui_overview_hits = _count_pattern(content_lower, r"\b(ui|user interface|graphical user interface|editor|panel|settings|browse|tag browser|configuration)\b")
+                if ui_overview_hits >= 3:
+                    relax_min_steps = True
+                    evidence.append("UI feature overview detected")
+                else:
+                    continue
+            else:
+                continue
+        if min_steps:
+            has_trigger = True
+
+        min_words = rule.get("min_words")
+        if min_words and signals["word_count"] < min_words:
+            continue
+        if min_words:
+            has_trigger = True
 
         for keyword in rule.get("keywords", []):
             hits = _keyword_hits(content_lower, keyword)
@@ -733,18 +832,26 @@ def detect_visuals(title, content):
                 score += hits * rule.get("weight", 1)
                 matched_keywords.append(keyword)
 
+        if rule.get("keywords") and not matched_keywords:
+            continue
+
         if matched_keywords:
+            has_trigger = True
             evidence.append("Keywords: " + ", ".join(matched_keywords[:6]))
 
-        min_steps = rule.get("min_steps")
         if min_steps and signals["steps"] >= min_steps:
             score += 2
             evidence.append(f"{signals['steps']} procedural steps detected")
+        elif min_steps and relax_min_steps:
+            ui_overview_hits = _count_pattern(content_lower, r"\b(ui|user interface|graphical user interface|editor|panel|settings|browse|tag browser|configuration)\b")
+            score += 2 + min(3, ui_overview_hits // 2)
 
-        min_words = rule.get("min_words")
         if min_words and signals["word_count"] >= min_words:
             score += 1
             evidence.append(f"{signals['word_count']} words detected")
+
+        if not has_trigger:
+            continue
 
         allowed_types = rule.get("content_types", [])
         if allowed_types and content_type in allowed_types:
@@ -763,11 +870,20 @@ def detect_visuals(title, content):
         if visual_type == "GIF Tutorial" and signals["steps"] > 10:
             score += 2
 
+        # Long procedures benefit from static workflow views, even without file-transfer keywords.
+        if visual_type == "Workflow Diagram" and signals["steps"] >= 8:
+            score += 7
+            evidence.append("Long multi-step procedure detected")
+
         if visual_type in {"Architecture Diagram", "Topology Diagram"} and content_type == "Procedure":
             score = max(score - 2, 0)
 
         if visual_type == "Before/After Comparison" and content_type != "Troubleshooting":
             score = max(score - 1, 0)
+
+        # Avoid architecture/data-flow false positives from keyword-only matches.
+        if visual_type in RELATIONSHIP_REQUIRED_VISUALS and relationship_count == 0:
+            continue
 
         if score <= 0:
             continue
@@ -788,6 +904,8 @@ def detect_visuals(title, content):
 
         generated_artifact = build_generated_artifact(visual_type, title, content, signals, content_type)
 
+        placement_hint = suggest_visual_placement(visual_type, content_type, signals)
+
         results.append({
             "visual_type": visual_type,
             "reason": rule["reason"],
@@ -805,7 +923,7 @@ def detect_visuals(title, content):
             "gap_coverage": gap["coverage_display"],
             "existing_count": gap["existing_count"],
             "required_count": gap["required_count"],
-            "placement_hint": placement_hint if visual_type in SCREENSHOT_TYPES.union(GIF_TYPES) else None,
+            "placement_hint": placement_hint,
             "diagram_blueprint": diagram_blueprint if visual_type in DIAGRAM_TYPES else None,
             "generated_artifact": generated_artifact,
             "suggested_content": generate_suggested_content(
@@ -826,6 +944,14 @@ def detect_visuals(title, content):
         seen.add(item["visual_type"])
         deduped.append(item)
 
+    # Drop any recommendation for a visual family that is already sufficiently covered.
+    # existing_count >= 2 means at least 2 visuals of that type already exist in the section.
+    deduped = [
+        item for item in deduped
+        if not (item.get("gap_message") == "No additional visuals needed" and item.get("existing_count", 0) >= 2)
+    ]
+
+    # Also drop lower-confidence covered items (existing_count == 1).
     deduped = [
         item for item in deduped
         if not (item.get("gap_message") == "No additional visuals needed" and item["confidence"] < 70)
@@ -835,7 +961,20 @@ def detect_visuals(title, content):
     if existing_assets["total"] >= 2 and signals["steps"] <= 7 and content_type == "Procedure":
         deduped = [item for item in deduped if item["confidence"] >= 75]
 
-    package = build_visual_package(deduped, signals, placement_hint)
+    # Keep short, clear procedural guidance text-first unless complexity justifies a visual.
+    if (
+        content_type == "Procedure"
+        and signals["steps"] <= 2
+        and signals["action_verbs"] <= 5
+        and signals["ui_interactions"] == 0
+        and signals["word_count"] <= 55
+        and signals["verifications"] == 0
+    ):
+        deduped = []
+
+    deduped = select_final_recommendations(deduped, signals, content_type)
+
+    package = build_visual_package(deduped, signals, content_type)
     if package:
         deduped.insert(0, package)
 

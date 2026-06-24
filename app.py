@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request
 from analyzers.text_extractor import extract_text
 from analyzers.section_splitter import split_sections
-from analyzers.visual_detector import detect_visuals
+from analyzers.visual_detector import detect_visuals, compute_signals
 
 app = Flask(__name__)
 
@@ -49,9 +49,12 @@ def home():
                     section["content"]
                 )
 
+                step_lines = compute_signals(section["content"])["step_lines"]
+
                 results.append({
                     "title": section["title"],
                     "content": section["content"],
+                    "step_lines": step_lines,
                     "suggestions": suggestions
                 })
 

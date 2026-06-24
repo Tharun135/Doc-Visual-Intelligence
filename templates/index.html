@@ -205,40 +205,23 @@
                         <!-- Right pane: Suggestion Detail Container -->
                         <div class="detail-container">
                             {% for result in results %}
-                                <div class="detail-panel" id="detail-{{ loop.index0 }}">
+                                <div class="detail-panel" id="detail-{{ loop.index0 }}" data-step-lines='{{ result.step_lines | tojson }}'>
                                     <div class="detail-header">
                                         <h3 class="detail-title">{{ result.title }}</h3>
                                         <p class="detail-subtitle">Section with {{ result.suggestions | length }} visual recommendation{{ result.suggestions | length != 1 and 's' or '' }}</p>
                                     </div>
                                     
-                                    <!-- SECTION CONTENT WITH INSERTION POINTS -->
-                                    <div class="section-with-placement">
-                                        <div class="placement-indicator placement-start">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                                <polyline points="5 12 12 19 19 12"></polyline>
-                                            </svg>
-                                            <span>Insert visual before this section</span>
-                                        </div>
-                                        
-                                        <!-- Highlightable Source Code Box -->
-                                        <div class="section-content-box">{{ result.content }}</div>
-                                        
-                                        <div class="placement-indicator placement-end">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                                <polyline points="5 12 12 19 19 12"></polyline>
-                                            </svg>
-                                            <span>Insert visual after this section</span>
-                                        </div>
-                                    </div>
+                                    <!-- Section content with placement highlight support -->
+                                    <div class="section-content-box" id="content-box-{{ loop.index0 }}">{{ result.content }}</div>
 
                                     <!-- Recommendations Cards List -->
                                     <div class="reco-list">
                                         {% set result_index = loop.index0 %}
                                         {% for suggestion in result.suggestions %}
                                             {% set artifact_id = 'artifact-' ~ result_index ~ '-' ~ loop.index0 %}
-                                            <div class="reco-card writer-focused">
+                                            <div class="reco-card writer-focused"
+                                                 data-placement-type="{{ suggestion.placement_hint.placement if suggestion.placement_hint else '' }}"
+                                                 data-placement-step="{{ suggestion.placement_hint.step_number if suggestion.placement_hint else 0 }}">
                                                 <!-- HEADER: Visual Type Only -->
                                                 <div class="reco-card-header-simple">
                                                     <div class="reco-type-container">
@@ -274,19 +257,6 @@
                                                     <div class="reco-why-label">Why</div>
                                                     <p class="reco-reason">{{ suggestion.reason }}</p>
                                                 </div>
-
-                                                <!-- Placement recommendation (prominent for procedural content) -->
-                                                {% if suggestion.placement_hint %}
-                                                    <div class="reco-placement-highlight">
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; flex-shrink: 0;">
-                                                            <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
-                                                        </svg>
-                                                        <div>
-                                                            <div class="placement-label">Recommended placement</div>
-                                                            <div class="placement-text">{{ suggestion.placement_hint.display_text }}</div>
-                                                        </div>
-                                                    </div>
-                                                {% endif %}
 
                                                 <!-- HIDDEN BY DEFAULT: Advanced technical details -->
                                                 <div class="reco-advanced-collapsible">
@@ -354,11 +324,39 @@
                                                 {% endif %}
 
                                                 {% if suggestion.generated_artifact %}
-                                                    <div class="artifact-box">
+                                                    <div class="generate-visual-actions" style="margin-top: 0.75rem;">
+                                                        <button type="button" class="insert-visual-btn generate-artifact-btn" data-target-id="{{ artifact_id }}-container" data-visual-type="{{ suggestion.visual_type }}">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                                            </svg>
+                                                            Generate {{ suggestion.visual_type }}
+                                                        </button>
+                                                    </div>
+                                                    <div id="{{ artifact_id }}-container" class="artifact-box artifact-hidden">
                                                         <div class="sim-label artifact-header">
                                                             <span>Generated Visual Artifact</span>
                                                             <span class="status">Content-Driven</span>
                                                         </div>
+
+                                                        {% if suggestion.placement_hint %}
+                                                            <div class="reco-placement-highlight" style="margin-top: 0; margin-bottom: 0.75rem;">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; flex-shrink: 0;">
+                                                                    <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+                                                                </svg>
+                                                                <div style="flex: 1;">
+                                                                    <div class="placement-label">Recommended placement</div>
+                                                                    <div class="placement-text">{{ suggestion.placement_hint.display_text }}</div>
+                                                                </div>
+                                                                <button type="button" class="show-in-text-btn" title="Highlight location in section content">
+                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 13px; height: 13px;">
+                                                                        <circle cx="11" cy="11" r="8"></circle>
+                                                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                                                    </svg>
+                                                                    Show in text
+                                                                </button>
+                                                            </div>
+                                                        {% endif %}
+
                                                         <p class="artifact-summary">{{ suggestion.generated_artifact.summary }}</p>
                                                         <div class="artifact-preview-box">
                                                             <div class="artifact-preview-label">Rendered Preview</div>
@@ -381,33 +379,6 @@
                                                             </div>
                                                         </div>
 
-                                                        <!-- INSERT VISUAL ACTIONS -->
-                                                        <div class="insert-visual-actions">
-                                                            <div class="insert-label">Insert this visual:</div>
-                                                            {% if suggestion.placement_hint %}
-                                                                <button type="button" class="insert-visual-btn insert-at-placement" data-placement="recommended">
-                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                        <polyline points="12 5 19 12 12 19"></polyline>
-                                                                        <polyline points="7 12 19 12"></polyline>
-                                                                    </svg>
-                                                                    Insert at recommended location
-                                                                </button>
-                                                            {% endif %}
-                                                            <button type="button" class="insert-visual-btn insert-at-placement" data-placement="before">
-                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                                                                    <polyline points="5 12 12 5 19 12"></polyline>
-                                                                </svg>
-                                                                Insert before section
-                                                            </button>
-                                                            <button type="button" class="insert-visual-btn insert-at-placement" data-placement="after">
-                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                                                                    <polyline points="5 12 12 19 19 12"></polyline>
-                                                                </svg>
-                                                                Insert after section
-                                                            </button>
-                                                        </div>
                                                     </div>
                                                 {% endif %}
 
