@@ -179,6 +179,30 @@
                         </div>
                     </div>
 
+                    {% if feedback_summary and feedback_summary.has_data %}
+                    <div class="overview-card feedback-summary-card">
+                        <div class="overview-stats">
+                            <div class="stat-item">
+                                <span class="stat-val emerald-glow">{{ feedback_summary.acceptance_rate }}%</span>
+                                <span class="stat-label">Overall Acceptance</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-val primary-glow">{{ feedback_summary.total }}</span>
+                                <span class="stat-label">Feedback Votes</span>
+                            </div>
+                        </div>
+
+                        <div class="feedback-type-list">
+                            {% for item in feedback_summary.by_visual_type[:5] %}
+                                <div class="feedback-type-row">
+                                    <span class="feedback-type-name">{{ item.visual_type }}</span>
+                                    <span class="feedback-type-rate">{{ item.acceptance_rate }}% ({{ item.yes }}/{{ item.total }})</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- Two-Column Results Explorer Dashboard -->
                     <div class="dashboard-grid">
                         
@@ -221,7 +245,10 @@
                                             {% set artifact_id = 'artifact-' ~ result_index ~ '-' ~ loop.index0 %}
                                             <div class="reco-card writer-focused"
                                                  data-placement-type="{{ suggestion.placement_hint.placement if suggestion.placement_hint else '' }}"
-                                                 data-placement-step="{{ suggestion.placement_hint.step_number if suggestion.placement_hint else 0 }}">
+                                                    data-placement-step="{{ suggestion.placement_hint.step_number if suggestion.placement_hint else 0 }}"
+                                                    data-section-title="{{ result.title | e }}"
+                                                    data-visual-type="{{ suggestion.visual_type | e }}"
+                                                    data-confidence="{{ suggestion.confidence }}">
                                                 <!-- HEADER: Visual Type Only -->
                                                 <div class="reco-card-header-simple">
                                                     <div class="reco-type-container">
@@ -252,11 +279,47 @@
                                                     </div>
                                                 </div>
 
+                                                <!-- READER QUESTION -->
+                                                {% if suggestion.reader_question and suggestion.reader_question != '—' %}
+                                                <div class="reco-why-section" style="margin-bottom: 8px;">
+                                                    <div class="reco-reader-question" style="font-weight: 600; color: var(--accent-color); font-size: 1.05rem;">
+                                                        "{{ suggestion.reader_question }}"
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+
                                                 <!-- WHY: Reason (PRIMARY) -->
                                                 <div class="reco-why-section">
                                                     <div class="reco-why-label">Why</div>
                                                     <p class="reco-reason">{{ suggestion.reason }}</p>
                                                 </div>
+
+                                                {% if suggestion.placement_hint %}
+                                                    <div class="reco-placement-highlight" style="margin-top: 0.35rem; margin-bottom: 0.55rem;">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; flex-shrink: 0;">
+                                                            <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+                                                        </svg>
+                                                        <div style="flex: 1;">
+                                                            <div class="placement-label">Recommended placement</div>
+                                                            <div class="placement-text">{{ suggestion.placement_hint.display_text }}</div>
+                                                        </div>
+                                                        <button type="button" class="show-in-text-btn" title="Highlight location in section content">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 13px; height: 13px;">
+                                                                <circle cx="11" cy="11" r="8"></circle>
+                                                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                                            </svg>
+                                                            Show in text
+                                                        </button>
+                                                    </div>
+                                                {% endif %}
+
+                                                {% if suggestion.visual_type != "No recommendation" %}
+                                                    <div class="feedback-actions">
+                                                        <span class="feedback-label">Was this useful?</span>
+                                                        <button type="button" class="feedback-btn" data-useful="yes">👍 Yes</button>
+                                                        <button type="button" class="feedback-btn" data-useful="no">👎 No</button>
+                                                    </div>
+                                                {% endif %}
 
                                                 <!-- HIDDEN BY DEFAULT: Advanced technical details -->
                                                 <div class="reco-advanced-collapsible">
@@ -303,10 +366,8 @@
                                                         {% if suggestion.rationale %}
                                                             <div class="advanced-section">
                                                                 <div class="advanced-section-title">Analysis:</div>
-                                                                <div class="evidence-pills">
-                                                                    {% for item in suggestion.rationale %}
-                                                                        <span class="evidence-pill">{{ item }}</span>
-                                                                    {% endfor %}
+                                                                <div style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.45; margin-top: 4px;">
+                                                                    {{ suggestion.rationale }}
                                                                 </div>
                                                             </div>
                                                         {% endif %}
@@ -320,6 +381,16 @@
                                                             <span class="status">Draft</span>
                                                         </div>
                                                         <p class="reco-reason" style="margin: 0; color: var(--text-secondary);">{{ suggestion.suggested_content }}</p>
+                                                    </div>
+                                                {% endif %}
+
+                                                {% if suggestion.insertion_snippet %}
+                                                    <div class="simulator-box" style="padding: 0.8rem 1rem; margin-top: 0.65rem;">
+                                                        <div class="sim-label" style="margin-bottom: 0.4rem;">
+                                                            <span>Insertion Snippet</span>
+                                                            <button type="button" class="copy-artifact-btn" data-copy-target="{{ artifact_id }}-snippet">Copy insertion snippet</button>
+                                                        </div>
+                                                        <pre id="{{ artifact_id }}-snippet" class="artifact-code-block">{{ suggestion.insertion_snippet }}</pre>
                                                     </div>
                                                 {% endif %}
 
@@ -338,25 +409,6 @@
                                                             <span class="status">Content-Driven</span>
                                                         </div>
 
-                                                        {% if suggestion.placement_hint %}
-                                                            <div class="reco-placement-highlight" style="margin-top: 0; margin-bottom: 0.75rem;">
-                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; flex-shrink: 0;">
-                                                                    <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
-                                                                </svg>
-                                                                <div style="flex: 1;">
-                                                                    <div class="placement-label">Recommended placement</div>
-                                                                    <div class="placement-text">{{ suggestion.placement_hint.display_text }}</div>
-                                                                </div>
-                                                                <button type="button" class="show-in-text-btn" title="Highlight location in section content">
-                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 13px; height: 13px;">
-                                                                        <circle cx="11" cy="11" r="8"></circle>
-                                                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                                                    </svg>
-                                                                    Show in text
-                                                                </button>
-                                                            </div>
-                                                        {% endif %}
-
                                                         <p class="artifact-summary">{{ suggestion.generated_artifact.summary }}</p>
                                                         <div class="artifact-preview-box">
                                                             <div class="artifact-preview-label">Rendered Preview</div>
@@ -369,13 +421,6 @@
                                                                     <button type="button" class="copy-artifact-btn" data-copy-target="{{ artifact_id }}-mermaid">Copy</button>
                                                                 </div>
                                                                 <pre id="{{ artifact_id }}-mermaid" class="artifact-code-block">{{ suggestion.generated_artifact.mermaid }}</pre>
-                                                            </div>
-                                                            <div class="artifact-code-panel">
-                                                                <div class="artifact-code-header">
-                                                                    <span>Generated PlantUML</span>
-                                                                    <button type="button" class="copy-artifact-btn" data-copy-target="{{ artifact_id }}-plantuml">Copy</button>
-                                                                </div>
-                                                                <pre id="{{ artifact_id }}-plantuml" class="artifact-code-block">{{ suggestion.generated_artifact.plantuml }}</pre>
                                                             </div>
                                                         </div>
 

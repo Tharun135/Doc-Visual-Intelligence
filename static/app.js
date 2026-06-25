@@ -487,6 +487,52 @@ function initGenerateArtifactButtons() {
     });
 }
 
+function initFeedbackButtons() {
+    document.querySelectorAll('.feedback-btn').forEach(button => {
+        if (button.dataset.bound === 'true') {
+            return;
+        }
+        button.dataset.bound = 'true';
+
+        button.addEventListener('click', async () => {
+            const card = button.closest('.reco-card');
+            if (!card) {
+                return;
+            }
+
+            const payload = {
+                section_title: card.dataset.sectionTitle || '',
+                visual_type: card.dataset.visualType || '',
+                confidence: card.dataset.confidence || '',
+                useful: button.dataset.useful || '',
+            };
+
+            try {
+                const response = await fetch('/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Feedback request failed');
+                }
+
+                const buttons = card.querySelectorAll('.feedback-btn');
+                buttons.forEach(btn => btn.classList.remove('feedback-selected'));
+                button.classList.add('feedback-selected');
+                const original = button.textContent;
+                button.textContent = '✓ Saved';
+                setTimeout(() => {
+                    button.textContent = original;
+                }, 1200);
+            } catch (error) {
+                button.textContent = 'Retry';
+            }
+        });
+    });
+}
+
 // Placement highlight: "Show in text" button handler
 function initPlacementHighlight() {
     document.querySelectorAll('.show-in-text-btn').forEach(button => {
@@ -639,6 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(initGenerateArtifactButtons, 100);
     setTimeout(initInsertButtons, 100);
     setTimeout(initPlacementHighlight, 100);
+    setTimeout(initFeedbackButtons, 100);
 });
 
 // Also reinit when results are refreshed
@@ -648,6 +695,7 @@ const observer = new MutationObserver(() => {
     initGenerateArtifactButtons();
     initInsertButtons();
     initPlacementHighlight();
+    initFeedbackButtons();
 });
 
 observer.observe(document.body, {

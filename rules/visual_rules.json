@@ -1,222 +1,84 @@
 [
-{
-"id":"VR001",
-"min_steps":3,
-"keywords":[],
-"weight":3,
-"visual_type":"Flowchart",
-"content_types":["Procedure","Troubleshooting"],
-"reason":"Sequential process detected"
-},
-
-{
-"id":"VR002",
-"keywords":[
-"click",
-"button",
-"menu",
-"tab",
-"window",
-"dialog"
-],
-"weight":2,
-"visual_type":"Screenshot",
-"content_types":["Procedure"],
-"reason":"UI interaction detected"
-},
-
-{
-"id":"VR003",
-"keywords":[
-"PLC",
-"HMI",
-"server",
-"gateway"
-],
-"weight":2,
-"visual_type":"Architecture Diagram",
-"content_types":["Architecture","Concept"],
-"reason":"System relationship detected"
-},
-
-{
-"id":"VR004",
-"keywords":[
-"if",
-"else",
-"otherwise"
-],
-"weight":2,
-"visual_type":"Decision Tree",
-"content_types":["Troubleshooting","Procedure"],
-"reason":"Decision logic detected"
-},
-
-{
-"id":"VR005",
-"keywords":[
-"connect cable",
-"mount device",
-"power supply"
-],
-"weight":2,
-"visual_type":"Illustration",
-"content_types":["Procedure"],
-"reason":"Physical setup detected"
-},
-
-{
-"id":"VR006",
-"keywords":[
-"import file",
-"export file",
-"upload file",
-"download file",
-"import tags",
-"export tags"
-],
-"weight":3,
-"visual_type":"Workflow Diagram",
-"content_types":["Procedure"],
-"reason":"File transfer process detected"
-},
-
-{
-"id":"VR007",
-"keywords":[
-"json",
-"xml",
-"yaml",
-"{",
-"}",
-":"
-],
-"weight":3,
-"visual_type":"Code Example",
-"content_types":["Reference","Concept"],
-"reason":"Structured configuration detected"
-},
-
-{
-"id":"VR008",
-"min_words":100,
-"keywords":[],
-"weight":1,
-"visual_type":"Visual Summary",
-"content_types":["Concept","Reference"],
-"reason":"Large content block detected"
-},
-
-{
-"id":"VR009",
-"keywords":[
-"drag",
-"move",
-"navigate",
-"browse"
-],
-"weight":3,
-"min_steps":6,
-"visual_type":"GIF Tutorial",
-"content_types":["Procedure"],
-"reason":"Long interactive workflow detected"
-},
-
-{
-"id":"VR010",
-"keywords":[
-"device",
-"connector",
-"edge device",
-"plc",
-"cloud",
-"gateway",
-"network"
-],
-"weight":2,
-"visual_type":"Topology Diagram",
-"content_types":["Architecture"],
-"reason":"Communication topology across systems detected"
-},
-
-{
-"id":"VR011",
-"keywords":[
-"settings",
-"dialog",
-"panel",
-"tab",
-"configuration"
-],
-"weight":2,
-"min_steps":3,
-"visual_type":"Configuration Screenshot",
-"content_types":["Procedure","Reference"],
-"reason":"Configuration path with multiple UI interactions detected"
-},
-
-{
-"id":"VR012",
-"keywords":[
-"collect",
-"send",
-"transfer",
-"publish",
-"subscribe",
-"data flow"
-],
-"weight":3,
-"visual_type":"Data Flow Diagram",
-"content_types":["Architecture","Concept"],
-"reason":"Data movement across components detected"
-},
-
-{
-"id":"VR013",
-"keywords":[
-"map",
-"mapping",
-"field",
-"source",
-"target",
-"datatype"
-],
-"weight":2,
-"visual_type":"Mapping Table",
-"content_types":["Reference","Procedure"],
-"reason":"Source-to-target mapping guidance detected"
-},
-
-{
-"id":"VR014",
-"keywords":[
-"before",
-"after",
-"previous",
-"current",
-"changed",
-"improved"
-],
-"weight":2,
-"visual_type":"Before/After Comparison",
-"content_types":["Troubleshooting","Concept"],
-"reason":"State comparison language detected"
-},
-
-{
-"id":"VR015",
-"keywords":[
-"step",
-"then",
-"next",
-"sequence",
-"workflow",
-"order"
-],
-"weight":2,
-"min_steps":5,
-"visual_type":"Sequence Diagram",
-"content_types":["Procedure","Architecture"],
-"reason":"Multi-step sequence with actor handoffs detected"
-}
+    {
+        "id": "VR006",
+        "description": "File transfer workflow — import/export sequences that don't hit the step threshold",
+        "keywords": [
+            "import file",
+            "export file",
+            "upload file",
+            "download file",
+            "import tags",
+            "export tags"
+        ],
+        "weight": 3,
+        "min_keyword_hits": 1,
+        "visual_type": "Workflow Diagram",
+        "content_types": [
+            "Procedure"
+        ],
+        "reason": "File transfer process requires users to follow a sequence precisely",
+        "confidence_base": 70
+    },
+    {
+        "id": "VR013",
+        "description": "Source-to-target mapping tables for field or tag configuration",
+        "keywords": [
+            "mapping",
+            "source field",
+            "target field",
+            "datatype",
+            "data type",
+            "field mapping"
+        ],
+        "weight": 2,
+        "min_keyword_hits": 2,
+        "min_words": 20,
+        "visual_type": "Mapping Table",
+        "content_types": [
+            "Reference",
+            "Procedure"
+        ],
+        "reason": "Mapping relationships are clearest in a structured table",
+        "confidence_base": 75
+    },
+    {
+        "id": "VR005",
+        "description": "Physical hardware setup — mounting, cabling, power",
+        "keywords": [
+            "connect cable",
+            "mount device",
+            "power supply",
+            "din rail",
+            "wiring"
+        ],
+        "weight": 2,
+        "min_keyword_hits": 1,
+        "visual_type": "Illustration",
+        "content_types": [
+            "Procedure"
+        ],
+        "reason": "Physical assembly steps need spatial reference that text cannot convey",
+        "confidence_base": 80
+    },
+    {
+        "id": "VR007",
+        "description": "Structured config examples — JSON, YAML, XML blocks",
+        "keywords": [
+            "json payload",
+            "yaml config",
+            "xml schema",
+            "sample payload",
+            "example config"
+        ],
+        "weight": 2,
+        "min_keyword_hits": 1,
+        "min_words": 80,
+        "visual_type": "Code Example",
+        "content_types": [
+            "Reference",
+            "Concept"
+        ],
+        "reason": "Structured configuration is easiest to read as a formatted code block",
+        "confidence_base": 72
+    }
 ]

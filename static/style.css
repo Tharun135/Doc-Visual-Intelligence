@@ -822,6 +822,75 @@ textarea.editor:focus {
     color: var(--accent-emerald);
 }
 
+/* Recommendation feedback capture controls */
+.feedback-actions {
+    margin-top: 0.55rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.feedback-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.feedback-btn {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.feedback-btn:hover {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.45);
+    color: var(--text-primary);
+}
+
+.feedback-btn.feedback-selected {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.55);
+    color: var(--accent-emerald);
+}
+
+.feedback-summary-card {
+    margin-top: 0.85rem;
+}
+
+.feedback-type-list {
+    margin-top: 0.8rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 0.65rem;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.feedback-type-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+}
+
+.feedback-type-name {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.feedback-type-rate {
+    color: var(--text-primary);
+    font-family: var(--font-code);
+}
+
 /* Recommendation Cards */
 .reco-list {
     display: flex;
