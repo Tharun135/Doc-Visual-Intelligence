@@ -26,14 +26,6 @@
                 </div>
                 <span>Doc Visual Intelligence</span>
             </a>
-            <div class="overview-banner">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
-                <span>Doc Visual Intelligence v3.0</span>
-            </div>
         </div>
     </header>
 
@@ -52,6 +44,12 @@
             </h2>
 
             <form method="POST" enctype="multipart/form-data">
+                {% if upload_error %}
+                <div style="margin-bottom: 0.9rem; padding: 0.75rem 0.9rem; border: 1px solid rgba(255,120,120,0.35); border-radius: 10px; color: #ffd9d9; background: rgba(168, 38, 38, 0.2); font-size: 0.9rem;">
+                    {{ upload_error }}
+                </div>
+                {% endif %}
+
                 <!-- Input Mode Tabs -->
                 <div class="tab-container">
                     <button type="button" class="tab-btn {{ 'active' if input_source != 'text' else '' }}" data-tab="upload">File Upload</button>
@@ -74,8 +72,8 @@
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
                         <p class="upload-text">Drag and drop file here</p>
-                        <p class="upload-subtext">Supports .md, .txt, .json files (max 10MB)</p>
-                        <input type="file" name="document" class="file-input" accept=".txt,.md,.json">
+                        <p class="upload-subtext">Supports .md, .txt, .json, .pdf, .docx files (max 25MB)</p>
+                        <input type="file" name="document" class="file-input" accept=".txt,.md,.json,.pdf,.docx">
                     </div>
                     
                     <!-- Selected File Banner -->
@@ -141,7 +139,7 @@
                         <div class="radar-center"></div>
                     </div>
                     <h3>Engine Standby</h3>
-                    <p>Load a template or upload a setup document, then run the scan to identify visual document enhancements.</p>
+                    <p>Upload a document or paste the text, then run the analysis to identify visual document enhancements.</p>
                 </div>
             {% else %}
                 <!-- Results Content -->
@@ -731,6 +729,10 @@
         </section>
 
     </main>
+
+    <footer style="text-align:center; padding: 1rem 1.5rem 1.5rem; color: var(--text-subtle); font-size: 0.9rem;">
+        Developed by Tharun Sebastian
+    </footer>
 
     <script src="{{ url_for('static', filename='app.js', v='20260626a') }}"></script>
 </body>

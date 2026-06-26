@@ -1,12 +1,24 @@
 from flask import Flask, render_template, request, jsonify
 import csv
+import os
+import tempfile
 from datetime import datetime
 from pathlib import Path
+from werkzeug.exceptions import RequestEntityTooLarge
 from analyzers.text_extractor import extract_text
 from analyzers.section_splitter import split_sections
 from analyzers.visual_detector import detect_visuals, compute_signals
 
 app = Flask(__name__)
+
+ALLOWED_EXTENSIONS = {".txt", ".md", ".json", ".pdf", ".docx"}
+MAX_UPLOAD_MB = 25
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
+
+
+def _is_allowed_file(filename):
+    extension = Path(filename).suffix.lower()
+    return extension in ALLOWED_EXTENSIONS
 
 
 def _load_feedback_summary():
@@ -105,6 +117,7 @@ def home():
     results = []
     original_text = ""
     input_source = "" # 'file' or 'text' or ''
+    upload_error = ""
 
     if request.method == "POST":
         file = request.files.get("document")
@@ -114,19 +127,25 @@ def home():
         filename = ""
         if file and file.filename != "":
             filename = file.filename
-            # Read file stream directly to avoid temp file pollution, fallback to saving if needed
-            try:
-                text = file.read().decode("utf-8")
-            except Exception:
-                # Fallback to local save if decode fail or stream issue
-                import os
-                temp_path = os.path.join(app.root_path, "temp_upload.txt")
-                file.save(temp_path)
-                text = extract_text(temp_path)
+            if not _is_allowed_file(filename):
+                upload_error = "Unsupported file type. Use .txt, .md, .json, .pdf, or .docx."
+            else:
+                temp_path = ""
+                extension = Path(filename).suffix.lower()
                 try:
-                    os.remove(temp_path)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=extension) as temp_file:
+                        file.save(temp_file.name)
+                        temp_path = temp_file.name
+
+                    text = extract_text(temp_path)
+                    if not text.strip():
+                        upload_error = "No readable text found in the uploaded file."
                 except Exception:
-                    pass
+                    upload_error = "Could not read the uploaded file. Please check file contents and format."
+                finally:
+                    if temp_path and os.path.exists(temp_path):
+                        os.remove(temp_path)
+
             input_source = "file"
             original_text = text
         elif pasted_text.strip():
@@ -168,7 +187,20 @@ def home():
         original_text=original_text,
         input_source=input_source,
         feedback_summary=_load_feedback_summary(),
+        upload_error=upload_error,
     )
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_file_too_large(_error):
+    return render_template(
+        "index.html",
+        results=[],
+        original_text="",
+        input_source="file",
+        feedback_summary=_load_feedback_summary(),
+        upload_error=f"File is too large. Maximum allowed size is {MAX_UPLOAD_MB}MB.",
+    ), 413
 
 
 if __name__ == "__main__":
