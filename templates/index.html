@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentation Visualization Assistant - Analyze Visual Opportunities</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Doc Visual Intelligence - Analyze Visual Opportunities</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260626a') }}">
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 </head>
 <body>
@@ -24,7 +24,7 @@
                     </svg>
                     <div class="logo-radar"></div>
                 </div>
-                <span>Documentation Visualization Assistant</span>
+                <span>Doc Visual Intelligence</span>
             </a>
             <div class="overview-banner">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -32,7 +32,7 @@
                     <line x1="12" y1="16" x2="12" y2="12"></line>
                     <line x1="12" y1="8" x2="12.01" y2="8"></line>
                 </svg>
-                <span>Documentation Intelligence Engine v3.0</span>
+                <span>Doc Visual Intelligence v3.0</span>
             </div>
         </div>
     </header>
@@ -54,19 +54,19 @@
             <form method="POST" enctype="multipart/form-data">
                 <!-- Input Mode Tabs -->
                 <div class="tab-container">
-                    <button type="button" class="tab-btn active" data-tab="text">Pasted Text</button>
-                    <button type="button" class="tab-btn" data-tab="upload">File Upload</button>
+                    <button type="button" class="tab-btn {{ 'active' if input_source != 'text' else '' }}" data-tab="upload">File Upload</button>
+                    <button type="button" class="tab-btn {{ 'active' if input_source == 'text' else '' }}" data-tab="text">Pasted Text</button>
                 </div>
 
                 <!-- Pasted Text Editor Panel -->
-                <div class="tab-panel active" id="text-panel">
+                <div class="tab-panel {{ 'active' if input_source == 'text' else '' }}" id="text-panel">
                     <div class="textarea-wrapper">
-                        <textarea class="editor" name="pasted_text" placeholder="Type, paste, or load sample documentation text here to inspect..." required>{{ original_text if input_source == 'text' else '' }}</textarea>
+                        <textarea class="editor" name="pasted_text" placeholder="Type, paste, or load sample documentation text here to inspect..." {{ 'required' if input_source == 'text' else '' }}>{{ original_text if input_source == 'text' else '' }}</textarea>
                     </div>
                 </div>
 
                 <!-- File Upload Drag Zone Panel -->
-                <div class="tab-panel" id="upload-panel">
+                <div class="tab-panel {{ 'active' if input_source != 'text' else '' }}" id="upload-panel">
                     <div class="upload-zone">
                         <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -281,16 +281,38 @@
 
                                                 <!-- READER QUESTION -->
                                                 {% if suggestion.reader_question and suggestion.reader_question != '—' %}
-                                                <div class="reco-why-section" style="margin-bottom: 8px;">
-                                                    <div class="reco-reader-question" style="font-weight: 600; color: var(--accent-color); font-size: 1.05rem;">
-                                                        "{{ suggestion.reader_question }}"
+                                                <div class="reco-reader-question-block">
+                                                    "{{ suggestion.reader_question }}"
+                                                </div>
+                                                {% endif %}
+
+                                                <!-- META ROW: reader value, confidence, priority -->
+                                                {% if suggestion.visual_type != 'No recommendation' %}
+                                                <div class="reco-meta-row">
+                                                    <div class="reco-meta-item" title="How much effort this visual saves the reader (1 = marginal, 5 = eliminates significant cognitive load)">
+                                                        <span class="meta-label">Reader value</span>
+                                                        <div class="value-dots">
+                                                            {% for i in range(1, 6) %}
+                                                                <span class="value-dot {{ 'value-dot-filled' if i <= (suggestion.reader_value or 3) else 'value-dot-empty' }}"></span>
+                                                            {% endfor %}
+                                                        </div>
+                                                        <span class="value-text">{{ suggestion.reader_value or '–' }}/5</span>
+                                                    </div>
+                                                    <div class="reco-meta-item">
+                                                        <span class="meta-label">Confidence</span>
+                                                        <span class="confidence-dot {% if suggestion.confidence_category == 'High' %}confidence-high{% elif suggestion.confidence_category == 'Medium' %}confidence-medium{% else %}confidence-low{% endif %}"></span>
+                                                        <span class="meta-value">{{ suggestion.confidence_category }} ({{ suggestion.confidence }}%)</span>
+                                                    </div>
+                                                    <div class="reco-meta-item">
+                                                        <span class="meta-label">Priority</span>
+                                                        <span class="priority-badge priority-{{ suggestion.priority | lower }}">{{ suggestion.priority }}</span>
                                                     </div>
                                                 </div>
                                                 {% endif %}
 
                                                 <!-- WHY: Reason (PRIMARY) -->
                                                 <div class="reco-why-section">
-                                                    <div class="reco-why-label">Why</div>
+                                                    <div class="reco-why-label">Reader benefit</div>
                                                     <p class="reco-reason">{{ suggestion.reason }}</p>
                                                 </div>
 
@@ -330,47 +352,36 @@
                                                         <span>Advanced Details</span>
                                                     </button>
                                                     <div class="reco-advanced-content">
-                                                        <!-- Confidence & Classification -->
-                                                        <div class="advanced-row">
-                                                            <span class="advanced-label">Confidence:</span>
-                                                            <span class="confidence-dot {% if suggestion.confidence_category == 'High' %}confidence-high{% elif suggestion.confidence_category == 'Medium' %}confidence-medium{% else %}confidence-low{% endif %}"></span>
-                                                            <span>{{ suggestion.confidence_category }} ({{ suggestion.confidence }}%)</span>
-                                                        </div>
-                                                        <div class="advanced-row">
-                                                            <span class="advanced-label">Priority:</span>
-                                                            <span>{{ suggestion.priority }}</span>
-                                                        </div>
-                                                        <div class="advanced-row">
-                                                            <span class="advanced-label">Classification:</span>
-                                                            <span>{{ suggestion.content_type }} ({{ suggestion.content_type_confidence }}%)</span>
-                                                        </div>
-                                                        {% if suggestion.gap_coverage %}
-                                                            <div class="advanced-row">
-                                                                <span class="advanced-label">Coverage:</span>
-                                                                <span>{{ suggestion.gap_coverage }}</span>
-                                                            </div>
-                                                        {% endif %}
-
-                                                        <!-- Detection Evidence -->
+                                                        <!-- Detection Evidence (formula outputs) -->
                                                         {% if suggestion.evidence %}
                                                             <div class="advanced-section">
-                                                                <div class="advanced-section-title">Detection Evidence:</div>
-                                                                <div class="evidence-pills">
+                                                                <div class="advanced-section-title">Why this visual was selected:</div>
+                                                                <ul class="evidence-list">
                                                                     {% for item in suggestion.evidence %}
-                                                                        <span class="evidence-pill">{{ item }}</span>
+                                                                        <li class="evidence-item">{{ item }}</li>
                                                                     {% endfor %}
-                                                                </div>
+                                                                </ul>
                                                             </div>
                                                         {% endif %}
 
-                                                        {% if suggestion.rationale %}
-                                                            <div class="advanced-section">
-                                                                <div class="advanced-section-title">Analysis:</div>
-                                                                <div style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.45; margin-top: 4px;">
-                                                                    {{ suggestion.rationale }}
-                                                                </div>
+                                                        <!-- Classification detail -->
+                                                        <div class="advanced-section">
+                                                            <div class="advanced-section-title">Signal summary:</div>
+                                                            <div class="advanced-row">
+                                                                <span class="advanced-label">Section type:</span>
+                                                                <span>{{ suggestion.content_type }} ({{ suggestion.content_type_confidence }}% confidence)</span>
                                                             </div>
-                                                        {% endif %}
+                                                            <div class="advanced-row">
+                                                                <span class="advanced-label">Worthiness score:</span>
+                                                                <span>{{ suggestion.worthiness_score }}/10</span>
+                                                            </div>
+                                                            {% if suggestion.gap_coverage %}
+                                                            <div class="advanced-row">
+                                                                <span class="advanced-label">Visual coverage:</span>
+                                                                <span>{{ suggestion.gap_coverage }}</span>
+                                                            </div>
+                                                            {% endif %}
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -412,7 +423,7 @@
                                                         <p class="artifact-summary">{{ suggestion.generated_artifact.summary }}</p>
                                                         <div class="artifact-preview-box">
                                                             <div class="artifact-preview-label">Rendered Preview</div>
-                                                            <div class="mermaid artifact-mermaid-preview">{{ suggestion.generated_artifact.mermaid }}</div>
+                                                            <div class="mermaid artifact-mermaid-preview" data-visual-type="{{ suggestion.visual_type }}">{{ suggestion.generated_artifact.mermaid }}</div>
                                                         </div>
                                                         <div class="artifact-code-grid">
                                                             <div class="artifact-code-panel">
@@ -721,6 +732,6 @@
 
     </main>
 
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script src="{{ url_for('static', filename='app.js', v='20260626a') }}"></script>
 </body>
 </html>

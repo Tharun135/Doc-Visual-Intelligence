@@ -252,6 +252,16 @@ def compute_signals(content: str) -> dict:
         1
     )
 
+    # Density metrics: normalised per 100 words.
+    # These replace brittle raw-count thresholds so that a section with
+    # 3 UI terms in 20 words (dense) scores differently from one with
+    # 3 UI terms in 200 words (sparse).
+    word_count_safe = max(word_count, 1)
+    ui_density           = round(ui_interactions        / word_count_safe * 100, 1)
+    relationship_density = round(relationship_count     / word_count_safe * 100, 1)
+    procedure_density    = round(len(step_lines)        / word_count_safe * 100, 1)
+    decision_density     = round(conditional_branches   / word_count_safe * 100, 1)
+
     return {
         "step_lines": step_lines,
         "steps": len(step_lines),
@@ -267,6 +277,12 @@ def compute_signals(content: str) -> dict:
         "choice_option_markers": choice_option_markers,
         "word_count": word_count,
         "complexity_score": complexity_score,
+        # density metrics
+        "ui_density": ui_density,
+        "relationship_density": relationship_density,
+        "procedure_density": procedure_density,
+        "decision_density": decision_density,
+        # boolean flags
         "has_network_nouns": _has_network_nouns(content_lower),
         "has_code_block": _has_code_block(content),
         "has_comparison": _has_comparison(content),
@@ -694,7 +710,9 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             "reason": result.rationale,
             "confidence": confidence,
             "confidence_category": _confidence_category(confidence),
-            "priority": _priority(confidence),
+            # priority is set by the rule directly (independent of confidence)
+            "priority": result.priority,
+            "reader_value": result.reader_value,
             "content_type": content_type,
             "content_type_confidence": content_type_confidence,
             "complexity_score": signals["complexity_score"],
@@ -730,6 +748,8 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             "content_type_confidence": content_type_confidence,
             "complexity_score": signals["complexity_score"],
             "worthiness_score": worthiness_score,
+            # JSON rules don't compute reader_value; default to 3 (moderate benefit)
+            "reader_value": hit.get("reader_value", 3),
             "existing_visuals": existing_assets,
             "gap_message": gap["gap_message"],
             "gap_coverage": gap["coverage_display"],

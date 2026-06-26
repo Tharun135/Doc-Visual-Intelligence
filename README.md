@@ -1,4 +1,4 @@
-# Documentation Visualization Assistant
+# Doc Visual Intelligence
 
 A Flask web application that analyzes technical documents and recommends where to add visual aids (flowcharts, screenshots, diagrams, GIFs, etc.) based on configurable rules.
 

@@ -438,6 +438,7 @@ function initArtifactTools() {
             const source = preview.textContent;
             window.mermaid.render(`artifact-preview-${index}`, source).then(({ svg }) => {
                 preview.innerHTML = svg;
+                applyWorkflowAnimation(preview);
             }).catch(() => {
                 preview.textContent = source;
             });
@@ -458,10 +459,53 @@ function renderMermaidInContainer(container) {
         const source = preview.textContent;
         window.mermaid.render(`artifact-preview-generated-${Date.now()}-${index}`, source).then(({ svg }) => {
             preview.innerHTML = svg;
+            applyWorkflowAnimation(preview);
         }).catch(() => {
             preview.textContent = source;
         });
     });
+}
+
+function applyWorkflowAnimation(preview) {
+    if (!preview || preview.dataset.animated === 'true') {
+        return;
+    }
+
+    const visualType = (preview.dataset.visualType || '').trim().toLowerCase();
+    if (visualType !== 'workflow diagram') {
+        return;
+    }
+
+    const svg = preview.querySelector('svg');
+    if (!svg) {
+        return;
+    }
+
+    preview.classList.add('workflow-animated');
+
+    // Primary edge selectors from Mermaid flowcharts.
+    let edgePaths = Array.from(svg.querySelectorAll('.edgePath .path, .flowchart-link, .edge-thickness-normal, .edge-thickness-thick'));
+
+    // Fallback: if Mermaid theme/classes differ, animate path elements that are likely links.
+    if (edgePaths.length === 0) {
+        edgePaths = Array.from(svg.querySelectorAll('path')).filter((path) => {
+            return !path.closest('defs') && !path.closest('.node') && !path.closest('.label');
+        });
+    }
+
+    edgePaths.forEach((edge, index) => {
+        edge.style.setProperty('stroke-dasharray', '8 7');
+        edge.style.setProperty('animation', 'workflow-flow 1.5s linear infinite');
+        edge.style.setProperty('animation-delay', `${(index % 12) * 0.16}s`);
+    });
+
+    const nodes = svg.querySelectorAll('.node rect, .node polygon, .node circle, .node ellipse');
+    nodes.forEach((node, index) => {
+        node.style.setProperty('animation', 'workflow-node-pulse 2s ease-in-out infinite');
+        node.style.setProperty('animation-delay', `${(index % 12) * 0.18}s`);
+    });
+
+    preview.dataset.animated = 'true';
 }
 
 function initGenerateArtifactButtons() {

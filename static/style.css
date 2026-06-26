@@ -1034,6 +1034,21 @@ textarea.editor:focus {
     height: auto;
 }
 
+.artifact-mermaid-preview.workflow-animated svg .edgePath .path,
+.artifact-mermaid-preview.workflow-animated svg .flowchart-link {
+    stroke-dasharray: 8 7;
+    animation: workflow-flow 1.5s linear infinite;
+}
+
+.artifact-mermaid-preview.workflow-animated svg .node rect,
+.artifact-mermaid-preview.workflow-animated svg .node polygon,
+.artifact-mermaid-preview.workflow-animated svg .node circle,
+.artifact-mermaid-preview.workflow-animated svg .node ellipse {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: workflow-node-pulse 2s ease-in-out infinite;
+}
+
 .artifact-code-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1940,6 +1955,17 @@ textarea.editor:focus {
     }
 }
 
+@keyframes workflow-flow {
+    from { stroke-dashoffset: 0; }
+    to { stroke-dashoffset: -30; }
+}
+
+@keyframes workflow-node-pulse {
+    0% { filter: drop-shadow(0 0 0 rgba(59, 130, 246, 0)); }
+    50% { filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.45)); }
+    100% { filter: drop-shadow(0 0 0 rgba(59, 130, 246, 0)); }
+}
+
 /* V4 UX Improvements: Collapsible Details, Placement Highlight, Metadata Pills */
 
 /* Detail Panel with Placement Assistance */
@@ -2306,6 +2332,132 @@ textarea.editor:focus {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
+}
+
+/* Evidence list (replaces evidence-pills in advanced panel) */
+.evidence-list {
+    margin: 0;
+    padding: 0 0 0 1.1rem;
+    list-style: none;
+}
+
+.evidence-item {
+    position: relative;
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding: 0.15rem 0;
+}
+
+.evidence-item::before {
+    content: "•";
+    position: absolute;
+    left: -1.1rem;
+    color: var(--accent-color);
+    font-size: 0.9rem;
+}
+
+/* Reader question block */
+.reco-reader-question-block {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    font-style: italic;
+    margin-bottom: 0.6rem;
+    padding: 0.4rem 0.65rem;
+    border-left: 2px solid var(--accent-color);
+    background: rgba(99, 102, 241, 0.06);
+    border-radius: 0 4px 4px 0;
+}
+
+/* Meta row: reader value + confidence + priority */
+.reco-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.7rem;
+    padding: 0.45rem 0.65rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+}
+
+.reco-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+}
+
+.meta-label {
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.72rem;
+    white-space: nowrap;
+}
+
+.meta-value {
+    color: var(--text-secondary);
+}
+
+/* Reader value dots */
+.value-dots {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+}
+
+.value-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.value-dot-filled {
+    background: var(--accent-emerald);
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.5);
+}
+
+.value-dot-empty {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.value-text {
+    color: var(--accent-emerald);
+    font-weight: 700;
+    font-size: 0.78rem;
+}
+
+/* Priority badge */
+.priority-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.priority-high {
+    background: rgba(244, 63, 94, 0.15);
+    color: var(--accent-rose);
+    border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+.priority-medium {
+    background: rgba(245, 158, 11, 0.12);
+    color: var(--accent-amber);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.priority-low {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Confidence Category Colors */
