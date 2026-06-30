@@ -5,7 +5,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     initFileUpload();
-    initSamples();
     initResultsPanel();
     initGifTimelines();
     initFormLoading();
@@ -14,61 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initHelpModal();
 });
 
-// Sample text templates mapping
-const SAMPLES = {
-    workflow: `# Database Synchronisation Procedure
 
-Overview
-This procedure describes how to export user database records and import them into the secondary HMI panel.
-
-Procedure
-1. Login to the administration portal and locate the export data menu.
-2. Click the 'Export Records' button on the main configuration panel.
-3. Select the XML tags format from the drop-down dialog and click Confirm.
-4. Wait for the download file window to appear, then save the synchronisation package.
-5. Connect the sync cable between the gateway server and the HMI device.
-6. Mount device securely and connect to the auxiliary power supply socket.
-7. Open the HMI synchronisation manager tab, select import files, and choose the synchronization package.
-8. Click the 'Start Sync' button to load all parameters.`,
-
-    architecture: `# Factory Floor System Architecture
-
-Overview
-The factory network environment establishes connections between local control networks and remote cloud databases.
-
-System Layout
-A main PLC controller connects directly to the local HMI panel. The industrial gateway acts as the firewall connecting the control layer to the cloud server database.
-
-Configuration Details
-The connection parameters are structured in JSON format:
-{
-  "server_ip": "192.168.1.100",
-  "port": 8080,
-  "plc_id": "PLC_CORE_01",
-  "hmi_active": true
-}
-
-If security protocol is disabled, the gateway will block all incoming external traffic. Otherwise, it forwards packages securely.`,
-
-    decision: `# Valve Troubleshooting Flow
-
-Overview
-Follow this valve safety logic to determine if physical maintenance is required.
-
-Procedure
-1) Check the pressure gauge. If the pressure displays a value above 5.0 bar, then check the relief valve status immediately.
-2) If the relief valve status light is green, proceed to the secondary vent control.
-3) Else, if the light is red, shut down the main power feed.
-4) Otherwise, continue normal operations.`,
-
-    summary: `# Industrial Gateway Configuration
-
-Overview
-The industrial communication gateway supports cross-protocol data routing between legacy serial devices and cloud-based REST endpoints. This device contains dual ethernet interfaces for subnet isolation and hardware-based encryption.
-
-Device Setup Guidelines
-Ensure that all cables are shielded to prevent electromagnetic interference in high-voltage environments. It is recommended to perform a firmware check prior to deploying to live environments.`
-};
 
 /**
  * Tab Switching Logic
@@ -175,32 +120,7 @@ function initFileUpload() {
     }
 }
 
-/**
- * Load Sample Texts
- */
-function initSamples() {
-    const sampleBtns = document.querySelectorAll('.sample-btn');
-    const editor = document.querySelector('textarea.editor');
-    const textTabBtn = document.querySelector('[data-tab="text"]');
 
-    sampleBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const type = btn.dataset.sample;
-            if (SAMPLES[type]) {
-                // Switch to text tab if not active
-                textTabBtn.click();
-                editor.value = SAMPLES[type];
-                editor.focus();
-                
-                // Pulse editor for visual feedback
-                editor.style.borderColor = 'var(--primary)';
-                setTimeout(() => {
-                    editor.style.borderColor = 'var(--border-color)';
-                }, 800);
-            }
-        });
-    });
-}
 
 /**
  * Form Submission Loading State

@@ -433,9 +433,9 @@ def _visual_worthiness_score(signals: dict, content_type: str, section_context: 
 def _suggest_placement(visual_type: str, content_type: str, signals: dict) -> dict | None:
     diagram_types = {
         "Architecture Diagram", "Topology Diagram", "Data Flow Diagram",
-        "Workflow Diagram", "Decision Tree", "Comparison Table",
+        "Workflow Diagram", "Decision Tree", "Comparison Table", "Sequence Diagram",
     }
-    screenshot_types = {"Screenshot", "Configuration Screenshot", "Annotated Screenshot"}
+    screenshot_types = {"Screenshot", "Configuration Screenshot", "Annotated Screenshot", "GIF / Video Tutorial"}
 
     if visual_type in diagram_types:
         return {
@@ -478,16 +478,45 @@ def _sanitize(label: str) -> str:
     return label.replace('"', "'")
 
 
+def _shorten_step(step: str) -> str:
+    # Remove leading numbering
+    s = re.sub(r"^\s*(?:\d+[\.)]|step\s+\d+:?)\s*", "", step, flags=re.IGNORECASE)
+    # Truncate at punctuation only, keeping the phrase intact
+    parts = re.split(r"\.|,|;|\(", s)
+    short = parts[0].strip()
+    words = short.split()
+    if len(words) > 8:
+        short = " ".join(words[:8]) + "..."
+    return short.strip()
+
 def _build_workflow_artifact(title: str, signals: dict) -> dict | None:
     steps = signals.get("step_lines", [])
     if len(steps) < 2:
         return None
 
     mermaid = ["flowchart TD"]
+    # Siemens Corporate Branding (Petrol, Dark Blue, Stone)
+    mermaid.append("    classDef decision fill:#000028,stroke:#009999,stroke-width:2px,color:#fff,rx:8px,ry:8px;")
+    mermaid.append("    classDef wait fill:#333333,stroke:#999999,stroke-width:2px,stroke-dasharray: 4 4,color:#fff,rx:20px,ry:20px;")
+    mermaid.append("    classDef action fill:#005F87,stroke:#3eb1c8,stroke-width:2px,color:#fff,rx:8px,ry:8px;")
+    mermaid.append("    classDef ui fill:#009999,stroke:#00cccc,stroke-width:2px,color:#fff,rx:8px,ry:8px;")
+    
     for i, step in enumerate(steps):
-        mermaid.append(f'N{i+1}["{_sanitize(step)}"]')
+        short = _sanitize(_shorten_step(step))
+        step_lower = step.lower()
+        
+        # Semantic shape mapping with subtle emojis for polish
+        if any(w in step_lower for w in ["wait", "delay", "pause", "verify", "check status"]):
+            mermaid.append(f'    N{i+1}(["⏳ {short}"]):::wait')
+        elif any(w in step_lower for w in ["if ", "check ", "choose", "option"]):
+            mermaid.append(f'    N{i+1}{{"❓ {short}"}}:::decision')
+        elif any(w in step_lower for w in ["click", "open", "select", "go to", "navigate"]):
+            mermaid.append(f'    N{i+1}("{short}"):::ui')
+        else:
+            mermaid.append(f'    N{i+1}("{short}"):::action')
+            
     for i in range(len(steps) - 1):
-        mermaid.append(f"N{i+1} --> N{i+2}")
+        mermaid.append(f"    N{i+1} --> N{i+2}")
 
     return {
         "artifact_type": "workflow",
@@ -497,11 +526,84 @@ def _build_workflow_artifact(title: str, signals: dict) -> dict | None:
     }
 
 
+def _build_sequence_artifact(title: str, signals: dict) -> dict | None:
+    steps = signals.get("step_lines", [])
+    if len(steps) < 2:
+        return None
+
+    mermaid = ["sequenceDiagram"]
+    mermaid.append("    participant System")
+    mermaid.append("    participant Component")
+    for i, step in enumerate(steps):
+        clean_step = _sanitize(step[:40])
+        mermaid.append(f"    System->>Component: {i+1}. {clean_step}")
+
+    return {
+        "artifact_type": "sequence",
+        "title": title,
+        "mermaid": "\n".join(mermaid),
+        "summary": f"Generated from {len(steps)} steps.",
+    }
+
+
+def _build_decision_artifact(title: str, content: str) -> dict | None:
+    sentences = re.split(r"(?<=[.!?])\s+|\n", content)
+    conditions = []
+    
+    for s in sentences:
+        s = s.strip()
+        # Simple extraction of "If [condition], [action]" or "If [condition] then [action]"
+        match = re.search(r"\b[Ii]f\b\s+(.+?)(?:,|\sthen\s)\s*(.+)", s)
+        if match:
+            condition = match.group(1).strip()
+            action = match.group(2).strip(" .")
+            conditions.append((condition, action))
+
+    if not conditions:
+        return None
+
+    mermaid = ["flowchart TD"]
+    # Siemens Corporate Branding
+    mermaid.append("    classDef decision fill:#000028,stroke:#009999,stroke-width:2px,color:#fff,rx:8px,ry:8px;")
+    mermaid.append("    classDef action fill:#005F87,stroke:#3eb1c8,stroke-width:2px,color:#fff,rx:8px,ry:8px;")
+    mermaid.append("    classDef endnode fill:#333333,stroke:#666666,stroke-width:2px,color:#fff,rx:20px,ry:20px;")
+
+    mermaid.append('    Start(["Start"]):::endnode')
+    
+    for i, (cond, action) in enumerate(conditions):
+        short_cond = _sanitize(cond)
+        if len(short_cond) > 30: short_cond = short_cond[:30] + "..."
+        
+        short_action = _sanitize(action)
+        if len(short_action) > 40: short_action = short_action[:40] + "..."
+
+        mermaid.append(f'    C{i}{{"❓ {short_cond}?"}}:::decision')
+        mermaid.append(f'    A{i}("{short_action}"):::action')
+        
+        if i == 0:
+            mermaid.append(f"    Start --> C{i}")
+        else:
+            mermaid.append(f"    C{i-1} -->|No| C{i}")
+            
+        mermaid.append(f"    C{i} -->|Yes| A{i}")
+        
+    return {
+        "artifact_type": "workflow", # Triggers mermaid rendering in UI
+        "title": title,
+        "mermaid": "\n".join(mermaid),
+        "summary": f"Generated from {len(conditions)} decision branches.",
+    }
+
+
 def _build_generated_artifact(
     visual_type: str, title: str, content: str, signals: dict, content_type: str
 ) -> dict | None:
-    if visual_type in {"Workflow Diagram", "Sequence Diagram"}:
+    if visual_type == "Workflow Diagram":
         return _build_workflow_artifact(title, signals)
+    if visual_type == "Sequence Diagram":
+        return _build_sequence_artifact(title, signals)
+    if visual_type == "Decision Tree":
+        return _build_decision_artifact(title, content)
     return None
 
 
@@ -513,6 +615,12 @@ def _build_insertion_snippet(visual_type: str, generated_artifact: dict | None, 
         return (
             f"<!-- Insert {visual_type}: {placement} -->\n"
             f"```mermaid\n{mermaid}\n```"
+        )
+
+    if visual_type == "GIF / Video Tutorial":
+        return (
+            f"<!-- Insert {visual_type}: {placement} -->\n"
+            "![describe-animation](../media/your-animation.gif)"
         )
 
     if visual_type in {"Screenshot", "Configuration Screenshot", "Annotated Screenshot"}:
@@ -542,24 +650,47 @@ def _build_insertion_snippet(visual_type: str, generated_artifact: dict | None, 
 def _detect_existing_assets(content: str) -> dict:
     md_images = _count(content, r"!\[[^\]]*\]\([^\)]+\)")
     html_images = _count(content, r"<img\b")
-    screenshots = _count(content, r"\b(screenshot|screen capture|figure)\b")
-    diagrams = _count(content, r"\b(diagram|topology|architecture|flowchart|sequence)\b")
+    
+    # We no longer count text words like "diagram" or "screenshot" 
+    # as existing assets to prevent false positives and double-counting.
+    total = md_images + html_images
+    
     return {
-        "screenshot": md_images + html_images + screenshots,
-        "diagram": diagrams,
-        "gif": _count(content, r"\b(gif|animation|video demo)\b"),
-        "total": md_images + html_images + screenshots + diagrams,
+        "screenshot": total, # Generic bucket for existing visuals
+        "diagram": total,
+        "gif": total,
+        "total": total,
     }
+
+
+def _detect_accessibility_issues(content: str) -> list[str]:
+    issues = []
+    
+    # 1. Markdown empty alt text: ![]() or ![ ]()
+    md_missing_alt = re.findall(r"!\[\s*\]\(([^\)]+)\)", content)
+    for src in md_missing_alt:
+        issues.append(f"Markdown image '{src}' is missing Alt-Text.")
+        
+    # 2. HTML empty or missing alt text
+    html_images = re.findall(r"<img[^>]+>", content, re.IGNORECASE)
+    for img_tag in html_images:
+        alt_match = re.search(r'alt=["\'](.*?)["\']', img_tag, re.IGNORECASE)
+        if not alt_match or alt_match.group(1).strip() == "":
+            src_match = re.search(r'src=["\'](.*?)["\']', img_tag, re.IGNORECASE)
+            src = src_match.group(1) if src_match else "unknown"
+            issues.append(f"HTML image '{src}' is missing an alt attribute.")
+            
+    return issues
 
 
 def _gap_analysis(visual_type: str, existing: dict) -> dict:
     family_map = {
         "Screenshot": "screenshot", "Configuration Screenshot": "screenshot",
-        "Annotated Screenshot": "screenshot", "GIF Tutorial": "gif",
+        "Annotated Screenshot": "screenshot", "GIF / Video Tutorial": "gif", "GIF Tutorial": "gif",
         "Architecture Diagram": "diagram", "Topology Diagram": "diagram",
         "Data Flow Diagram": "diagram", "Workflow Diagram": "diagram",
         "Decision Tree": "diagram", "Flowchart": "diagram",
-        "Comparison Table": "diagram", "Mapping Table": "diagram",
+        "Comparison Table": "diagram", "Mapping Table": "diagram", "Sequence Diagram": "diagram",
     }
     family = family_map.get(visual_type, "other")
     existing_count = existing.get(family, 0)
@@ -775,6 +906,36 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
         if hit["gap_message"] == "No additional visuals needed" and hit.get("existing_count", 0) >= 1:
             continue
         deduped.append(hit)
+
+    # ── Accessibility Auditing ─────────────────
+    a11y_issues = _detect_accessibility_issues(content)
+    if a11y_issues:
+        a11y_card = {
+            "visual_type": "Accessibility Warning",
+            "reader_question": "Can screen readers describe this image?",
+            "reason": "Missing Alt-Text violates accessibility compliance.",
+            "confidence": 100,
+            "confidence_category": "High",
+            "priority": "High",
+            "reader_value": 5,
+            "content_type": content_type,
+            "content_type_confidence": content_type_confidence,
+            "complexity_score": signals["complexity_score"],
+            "worthiness_score": 10,
+            "evidence": a11y_issues,
+            "rationale": "Missing Alt-Text violates accessibility compliance and hurts SEO.",
+            "source": "a11y_auditor",
+            "existing_visuals": existing_assets,
+            "gap_message": f"{len(a11y_issues)} compliance issue(s)",
+            "gap_coverage": "Action Required",
+            "existing_count": 0,
+            "required_count": len(a11y_issues),
+            "placement_hint": None,
+            "generated_artifact": None,
+            "insertion_snippet": "<!-- Correct format: ![Descriptive Text](url) -->",
+            "suggested_content": "Add descriptive Alt-Text to the identified images so screen readers can interpret them.",
+        }
+        deduped.insert(0, a11y_card)
 
     # ── No results fallback ────────────────────
     if not deduped:

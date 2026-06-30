@@ -100,26 +100,7 @@
                     </div>
                 </div>
 
-                <!-- Sample Presets Grid -->
-                <h3 class="samples-title">Load Sample Templates</h3>
-                <div class="samples-grid">
-                    <button type="button" class="sample-btn" data-sample="workflow">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                        <span>Sync Sync Procedure</span>
-                    </button>
-                    <button type="button" class="sample-btn" data-sample="architecture">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-                        <span>System Architecture</span>
-                    </button>
-                    <button type="button" class="sample-btn" data-sample="decision">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"></path><path d="M20 7H4a2 2 0 0 0-2 2v10"></path></svg>
-                        <span>Troubleshoot Valve Logic</span>
-                    </button>
-                    <button type="button" class="sample-btn" data-sample="summary">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                        <span>Industrial Gateway Info</span>
-                    </button>
-                </div>
+
 
                 <!-- Submit Button -->
                 <button type="submit" class="btn-submit">
@@ -155,8 +136,11 @@
                     
                     <!-- Overview Summary Block -->
                     {% set section_count = results|length %}
-                    {% set ns = namespace(reco_count=0) %}
+                    {% set ns = namespace(reco_count=0, existing_count=0) %}
                     {% for result in results %}
+                        {% if result.suggestions and result.suggestions[0].existing_visuals %}
+                            {% set ns.existing_count = ns.existing_count + result.suggestions[0].existing_visuals.total %}
+                        {% endif %}
                         {% for suggestion in result.suggestions %}
                             {% if suggestion.visual_type != "No recommendation" %}
                                 {% set ns.reco_count = ns.reco_count + 1 %}
@@ -164,50 +148,22 @@
                         {% endfor %}
                     {% endfor %}
 
-                    <div class="overview-card">
+                    <div class="overview-card" style="margin-bottom: 1.5rem;">
                         <div class="overview-stats">
                             <div class="stat-item">
                                 <span class="stat-val primary-glow">{{ section_count }}</span>
-                                <span class="stat-label">Sections Scanned</span>
+                                <span class="stat-label">SECTIONS SCANNED</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-val" style="color: var(--accent-violet); text-shadow: 0 0 12px rgba(167, 139, 250, 0.4);">{{ ns.existing_count }}</span>
+                                <span class="stat-label">EXISTING VISUALS</span>
                             </div>
                             <div class="stat-item">
                                 <span class="stat-val emerald-glow">{{ ns.reco_count }}</span>
-                                <span class="stat-label">Visual Aids Advised</span>
+                                <span class="stat-label">VISUAL AIDS ADVISED</span>
                             </div>
-                        </div>
-                        
-                        <div class="overview-banner">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                            </svg>
-                            <span>Ready to optimize readability</span>
                         </div>
                     </div>
-
-                    {% if feedback_summary and feedback_summary.has_data %}
-                    <div class="overview-card feedback-summary-card">
-                        <div class="overview-stats">
-                            <div class="stat-item">
-                                <span class="stat-val emerald-glow">{{ feedback_summary.acceptance_rate }}%</span>
-                                <span class="stat-label">Overall Acceptance</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-val primary-glow">{{ feedback_summary.total }}</span>
-                                <span class="stat-label">Feedback Votes</span>
-                            </div>
-                        </div>
-
-                        <div class="feedback-type-list">
-                            {% for item in feedback_summary.by_visual_type[:5] %}
-                                <div class="feedback-type-row">
-                                    <span class="feedback-type-name">{{ item.visual_type }}</span>
-                                    <span class="feedback-type-rate">{{ item.acceptance_rate }}% ({{ item.yes }}/{{ item.total }})</span>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
 
                     <!-- Two-Column Results Explorer Dashboard -->
                     <div class="dashboard-grid">
@@ -292,29 +248,7 @@
                                                 </div>
                                                 {% endif %}
 
-                                                <!-- META ROW: reader value, confidence, priority -->
-                                                {% if suggestion.visual_type != 'No recommendation' %}
-                                                <div class="reco-meta-row">
-                                                    <div class="reco-meta-item" title="How much effort this visual saves the reader (1 = marginal, 5 = eliminates significant cognitive load)">
-                                                        <span class="meta-label">Reader value</span>
-                                                        <div class="value-dots">
-                                                            {% for i in range(1, 6) %}
-                                                                <span class="value-dot {{ 'value-dot-filled' if i <= (suggestion.reader_value or 3) else 'value-dot-empty' }}"></span>
-                                                            {% endfor %}
-                                                        </div>
-                                                        <span class="value-text">{{ suggestion.reader_value or '–' }}/5</span>
-                                                    </div>
-                                                    <div class="reco-meta-item">
-                                                        <span class="meta-label">Confidence</span>
-                                                        <span class="confidence-dot {% if suggestion.confidence_category == 'High' %}confidence-high{% elif suggestion.confidence_category == 'Medium' %}confidence-medium{% else %}confidence-low{% endif %}"></span>
-                                                        <span class="meta-value">{{ suggestion.confidence_category }} ({{ suggestion.confidence }}%)</span>
-                                                    </div>
-                                                    <div class="reco-meta-item">
-                                                        <span class="meta-label">Priority</span>
-                                                        <span class="priority-badge priority-{{ suggestion.priority | lower }}">{{ suggestion.priority }}</span>
-                                                    </div>
-                                                </div>
-                                                {% endif %}
+
 
                                                 <!-- WHY: Reason (PRIMARY) -->
                                                 <div class="reco-why-section">
@@ -341,55 +275,7 @@
                                                     </div>
                                                 {% endif %}
 
-                                                {% if suggestion.visual_type != "No recommendation" %}
-                                                    <div class="feedback-actions">
-                                                        <span class="feedback-label">Was this useful?</span>
-                                                        <button type="button" class="feedback-btn" data-useful="yes">👍 Yes</button>
-                                                        <button type="button" class="feedback-btn" data-useful="no">👎 No</button>
-                                                    </div>
-                                                {% endif %}
 
-                                                <!-- HIDDEN BY DEFAULT: Advanced technical details -->
-                                                <div class="reco-advanced-collapsible">
-                                                    <button class="reco-advanced-toggle" type="button" aria-expanded="false">
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
-                                                            <polyline points="6 9 12 15 18 9"></polyline>
-                                                        </svg>
-                                                        <span>Advanced Details</span>
-                                                    </button>
-                                                    <div class="reco-advanced-content">
-                                                        <!-- Detection Evidence (formula outputs) -->
-                                                        {% if suggestion.evidence %}
-                                                            <div class="advanced-section">
-                                                                <div class="advanced-section-title">Why this visual was selected:</div>
-                                                                <ul class="evidence-list">
-                                                                    {% for item in suggestion.evidence %}
-                                                                        <li class="evidence-item">{{ item }}</li>
-                                                                    {% endfor %}
-                                                                </ul>
-                                                            </div>
-                                                        {% endif %}
-
-                                                        <!-- Classification detail -->
-                                                        <div class="advanced-section">
-                                                            <div class="advanced-section-title">Signal summary:</div>
-                                                            <div class="advanced-row">
-                                                                <span class="advanced-label">Section type:</span>
-                                                                <span>{{ suggestion.content_type }} ({{ suggestion.content_type_confidence }}% confidence)</span>
-                                                            </div>
-                                                            <div class="advanced-row">
-                                                                <span class="advanced-label">Worthiness score:</span>
-                                                                <span>{{ suggestion.worthiness_score }}/10</span>
-                                                            </div>
-                                                            {% if suggestion.gap_coverage %}
-                                                            <div class="advanced-row">
-                                                                <span class="advanced-label">Visual coverage:</span>
-                                                                <span>{{ suggestion.gap_coverage }}</span>
-                                                            </div>
-                                                            {% endif %}
-                                                        </div>
-                                                    </div>
-                                                </div>
 
                                                 {% if suggestion.suggested_content %}
                                                     <div class="simulator-box" style="padding: 0.8rem 1rem; margin-top: 0.65rem;">

@@ -177,8 +177,11 @@ def _match_pr_connections(signals: dict) -> Optional[RuleResult]:
     }
     confidence = _formula_confidence(base=20, components=components)
 
-    # Visual type hierarchy (Data Flow > Topology > Architecture):
-    if data_flow >= 2:
+    # Visual type hierarchy (Sequence > Data Flow > Topology > Architecture):
+    if data_flow >= 2 and has_network:
+        visual = "Sequence Diagram"
+        rationale = "Reader needs to trace the exact order of back-and-forth communication between components."
+    elif data_flow >= 2:
         visual = "Data Flow Diagram"
         rationale = "Reader needs to trace data movement across components to understand the system."
     elif has_network and rel >= 2:
@@ -293,21 +296,28 @@ def _match_pr_screenshot(signals: dict) -> Optional[RuleResult]:
     if signals.get("verifications", 0) >= 1:
         evidence.append("Verification step detected — screenshot confirms expected state")
 
+    if steps >= 8 and ui_density >= 3.0:
+        visual_type = "GIF / Video Tutorial"
+        rationale = "Procedure is too long and UI-heavy for static screenshots; a continuous recording is required."
+    else:
+        visual_type = "Screenshot"
+        rationale = "Reader needs to see the exact UI state to navigate confidently."
+
     return RuleResult(
-        visual_type="Screenshot",
+        visual_type=visual_type,
         reader_question="Where do I click?",
         confidence=confidence,
         priority=priority,
         reader_value=reader_value,
         evidence=evidence,
-        rationale="Reader needs to see the exact UI state to navigate confidently.",
+        rationale=rationale,
     )
 
 
 PR_SCREENSHOT = Rule(
     id="PR_SCREENSHOT",
     reader_question="Where do I click?",
-    visual_type="Screenshot",
+    visual_type="Screenshot / GIF Tutorial",
     description="UI navigation sequences where readers need to see the interface state.",
     match=_match_pr_screenshot,
 )
