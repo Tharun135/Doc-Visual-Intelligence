@@ -20,7 +20,7 @@ def split_sections(text):
     # Result
     # ------------------------------------
 
-    pattern = r'^(#{1,6}\s+.+|Requirement[s]?|Procedure|Result[s]?|Purpose|Overview|Introduction)$'
+    pattern = r'^(#{1,6}\s+.+|\d+(?:\.\d+)*\s+.+|Requirement[s]?|Procedure|Result[s]?|Purpose|Overview|Introduction)$'
 
     matches = list(
         re.finditer(

@@ -6,7 +6,9 @@ from pypdf import PdfReader
 
 def _read_plain_text(filepath):
     with open(filepath, "r", encoding="utf-8") as file:
-        return file.read()
+        text = file.read()
+    # Normalize line endings and preserve structure
+    return text.strip()
 
 
 def _read_pdf_text(filepath):
@@ -14,6 +16,7 @@ def _read_pdf_text(filepath):
     page_text = []
     for page in reader.pages:
         text = page.extract_text() or ""
+        # Preserve structure by keeping non-empty pages with double newline separation
         if text.strip():
             page_text.append(text.strip())
     return "\n\n".join(page_text)
@@ -21,8 +24,13 @@ def _read_pdf_text(filepath):
 
 def _read_docx_text(filepath):
     document = Document(filepath)
-    paragraphs = [paragraph.text.strip() for paragraph in document.paragraphs if paragraph.text.strip()]
-    return "\n".join(paragraphs)
+    text_parts = []
+    for paragraph in document.paragraphs:
+        text = paragraph.text.strip()
+        if text:
+            text_parts.append(text)
+    # Use double newlines to preserve section structure
+    return "\n\n".join(text_parts)
 
 
 def extract_text(filepath):

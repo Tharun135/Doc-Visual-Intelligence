@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFormLoading();
     initArtifactTools();
     initInsertButtons();
+    initHelpModal();
 });
 
 // Sample text templates mapping
@@ -225,6 +226,7 @@ function initFormLoading() {
 function initResultsPanel() {
     const sectionItems = document.querySelectorAll('.section-item-card');
     const detailPanels = document.querySelectorAll('.detail-panel');
+    const detailContainer = document.querySelector('.detail-container');
 
     if (!sectionItems.length) return;
 
@@ -242,6 +244,13 @@ function initResultsPanel() {
             if (targetPanel) {
                 targetPanel.classList.add('active');
                 highlightContentKeywords(targetPanel);
+                
+                // Scroll detail container to top with small delay to ensure render
+                if (detailContainer) {
+                    setTimeout(() => {
+                        detailContainer.scroll({ top: 0, behavior: 'smooth' });
+                    }, 10);
+                }
             }
         });
     });
@@ -741,6 +750,46 @@ const observer = new MutationObserver(() => {
     initPlacementHighlight();
     initFeedbackButtons();
 });
+
+/**
+ * Initialize Help Modal
+ */
+function initHelpModal() {
+    const helpToggleBtn = document.getElementById('helpToggleBtn');
+    const closeHelpBtn = document.getElementById('closeHelpBtn');
+    const helpModal = document.getElementById('helpModal');
+
+    if (!helpToggleBtn || !closeHelpBtn || !helpModal) return;
+
+    // Open help modal
+    helpToggleBtn.addEventListener('click', () => {
+        helpModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    });
+
+    // Close help modal
+    closeHelpBtn.addEventListener('click', () => {
+        helpModal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    });
+
+    // Close on overlay click
+    const overlay = helpModal.querySelector('.help-modal-overlay');
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            helpModal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        });
+    }
+
+    // Close on ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && helpModal.classList.contains('active')) {
+            helpModal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+    });
+}
 
 observer.observe(document.body, {
     childList: true,

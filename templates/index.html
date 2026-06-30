@@ -26,6 +26,14 @@
                 </div>
                 <span>Doc Visual Intelligence</span>
             </a>
+            <button type="button" class="header-help-btn" id="helpToggleBtn" title="View user guide">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 16v-4"></path>
+                    <path d="M12 8h.01"></path>
+                </svg>
+                <span>Guide</span>
+            </button>
         </div>
     </header>
 
@@ -733,6 +741,207 @@
     <footer style="text-align:center; padding: 1rem 1.5rem 1.5rem; color: var(--text-subtle); font-size: 0.9rem;">
         Developed by Tharun Sebastian
     </footer>
+
+    <!-- User Guide Modal -->
+    <div id="helpModal" class="help-modal">
+        <div class="help-modal-overlay"></div>
+        <div class="help-modal-content">
+            <div class="help-modal-header">
+                <h2>Doc Visual Intelligence - User Guide</h2>
+                <button type="button" id="closeHelpBtn" class="close-help-btn" title="Close guide">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="help-modal-body">
+                <!-- Welcome Section -->
+                <div class="help-section">
+                    <h3>👋 Welcome!</h3>
+                    <p>This tool analyzes your technical documents and suggests where to add visual aids like diagrams, screenshots, and flowcharts to improve readability.</p>
+                </div>
+
+                <!-- Quick Start -->
+                <div class="help-section">
+                    <h3>🚀 Quick Start (3 Steps)</h3>
+                    <ol class="help-steps">
+                        <li><strong>Upload or paste your document</strong> - Supports PDF, DOCX, TXT, MD, JSON (max 25MB)</li>
+                        <li><strong>Click "Analyze Visual Opportunities"</strong> - AI scans your entire document</li>
+                        <li><strong>Review recommendations</strong> - See what visuals to add and where</li>
+                    </ol>
+                </div>
+
+                <!-- How to Use Section -->
+                <div class="help-section">
+                    <h3>📄 How to Upload Your Document</h3>
+                    <div class="help-subsection">
+                        <h4>Option 1: File Upload</h4>
+                        <ul class="help-list">
+                            <li>Click "File Upload" tab on the left</li>
+                            <li>Drag & drop your file OR click to browse</li>
+                            <li>Supported formats: PDF, DOCX, TXT, MD, JSON</li>
+                            <li>Maximum file size: 25MB</li>
+                        </ul>
+                    </div>
+                    <div class="help-subsection">
+                        <h4>Option 2: Paste Text</h4>
+                        <ul class="help-list">
+                            <li>Click "Pasted Text" tab</li>
+                            <li>Copy your text and paste into the editor</li>
+                            <li>Perfect for testing small sections</li>
+                        </ul>
+                    </div>
+                    <div class="help-subsection">
+                        <h4>Option 3: Sample Templates</h4>
+                        <ul class="help-list">
+                            <li>Try pre-loaded samples to see how recommendations work</li>
+                            <li>Click any sample button: "Sync Procedure", "System Architecture", etc.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Understanding Results -->
+                <div class="help-section">
+                    <h3>📊 Understanding the Results</h3>
+                    <div class="help-subsection">
+                        <h4>Left Panel: Sections List</h4>
+                        <ul class="help-list">
+                            <li><strong>Section title</strong> - The heading or section number from your document</li>
+                            <li><strong>Visual badge</strong> - Shows recommended visual type (e.g., "Flowchart", "Diagram")</li>
+                            <li><strong>Text snippet</strong> - Preview of the section content</li>
+                            <li><strong>Click any section</strong> - Details appear on the right</li>
+                        </ul>
+                    </div>
+                    <div class="help-subsection">
+                        <h4>Right Panel: Detailed Recommendations</h4>
+                        <ul class="help-list">
+                            <li><strong>Visual Type</strong> - What to create (Screenshot, Flowchart, etc.)</li>
+                            <li><strong>Reader Benefit</strong> - Why this visual helps readers</li>
+                            <li><strong>Reader Value (1-5)</strong> - How much effort it saves readers</li>
+                            <li><strong>Confidence %</strong> - How certain the AI is about this recommendation</li>
+                            <li><strong>Priority</strong> - High, Medium, Low importance</li>
+                            <li><strong>Recommended Placement</strong> - Where in the text to add it</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Visual Types -->
+                <div class="help-section">
+                    <h3>🎨 Types of Visuals Recommended</h3>
+                    <div class="help-visual-grid">
+                        <div class="help-visual-item">
+                            <div class="help-visual-icon">📸</div>
+                            <h4>Screenshot</h4>
+                            <p>Show UI elements, menus, or configuration panels to help users navigate</p>
+                        </div>
+                        <div class="help-visual-item">
+                            <div class="help-visual-icon">⬜</div>
+                            <h4>Flowchart</h4>
+                            <p>Explain step-by-step processes and decision paths</p>
+                        </div>
+                        <div class="help-visual-item">
+                            <div class="help-visual-icon">🏗️</div>
+                            <h4>Architecture Diagram</h4>
+                            <p>Show system components, connections, and data flow</p>
+                        </div>
+                        <div class="help-visual-item">
+                            <div class="help-visual-icon">🌳</div>
+                            <h4>Decision Tree</h4>
+                            <p>Visualize logical choices and outcomes</p>
+                        </div>
+                        <div class="help-visual-item">
+                            <div class="help-visual-icon">📝</div>
+                            <h4>Code Example</h4>
+                            <p>Show syntax, JSON, or configuration samples</p>
+                        </div>
+                        <div class="help-visual-item">
+                            <div class="help-visual-icon">🎬</div>
+                            <h4>GIF Tutorial</h4>
+                            <p>Create screen recordings for multi-step procedures</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Working with Recommendations -->
+                <div class="help-section">
+                    <h3>✅ Working with Recommendations</h3>
+                    <div class="help-subsection">
+                        <h4>Feedback</h4>
+                        <ul class="help-list">
+                            <li>Rate recommendations: <strong>"Was this useful?"</strong> with 👍 Yes or 👎 No</li>
+                            <li>Your feedback helps improve AI accuracy for future analyses</li>
+                        </ul>
+                    </div>
+                    <div class="help-subsection">
+                        <h4>Advanced Details</h4>
+                        <ul class="help-list">
+                            <li>Click <strong>"Advanced Details"</strong> to see signal analysis</li>
+                            <li>View why the AI made this recommendation</li>
+                            <li>See confidence scores and detected content type</li>
+                        </ul>
+                    </div>
+                    <div class="help-subsection">
+                        <h4>Suggested Content</h4>
+                        <ul class="help-list">
+                            <li>Some recommendations include <strong>"Suggested Visual Content"</strong></li>
+                            <li>Copy insertion snippets to add placeholders to your document</li>
+                            <li>AI can generate Mermaid diagram code automatically</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Tips & Tricks -->
+                <div class="help-section">
+                    <h3>💡 Tips & Tricks</h3>
+                    <ul class="help-list">
+                        <li><strong>Long documents?</strong> - Click sections on the left to jump to recommendations instantly (no scrolling needed!)</li>
+                        <li><strong>Test first</strong> - Try sample templates to understand how recommendations work</li>
+                        <li><strong>Check placement hints</strong> - "After step 3:" tells you exactly where to add the visual</li>
+                        <li><strong>Reader value matters</strong> - Focus on high value recommendations (4-5 dots) first</li>
+                        <li><strong>High priority sections</strong> - These typically improve readability most</li>
+                        <li><strong>Multiple recommendations?</strong> - One section can have several visual suggestions</li>
+                    </ul>
+                </div>
+
+                <!-- FAQ -->
+                <div class="help-section">
+                    <h3>❓ FAQ</h3>
+                    <div class="help-faq-item">
+                        <h4>What formats can I upload?</h4>
+                        <p>PDF, DOCX (Word), TXT, MD (Markdown), and JSON files up to 25MB</p>
+                    </div>
+                    <div class="help-faq-item">
+                        <h4>How does it detect sections?</h4>
+                        <p>AI identifies headings (numbered like "1.2.3" or markdown "#"), and keywords like "Procedure", "Overview", "Introduction"</p>
+                    </div>
+                    <div class="help-faq-item">
+                        <h4>Can I edit recommendations?</h4>
+                        <p>Recommendations are AI-generated suggestions. You control what actually gets added to your document</p>
+                    </div>
+                    <div class="help-faq-item">
+                        <h4>Why "No recommendation"?</h4>
+                        <p>Some sections may be best as pure text (e.g., summaries, disclaimers). The AI respects this</p>
+                    </div>
+                    <div class="help-faq-item">
+                        <h4>What does confidence % mean?</h4>
+                        <p>Higher % = AI is more certain this visual would help. 80%+ is highly confident</p>
+                    </div>
+                    <div class="help-faq-item">
+                        <h4>Can I regenerate the analysis?</h4>
+                        <p>Yes! Upload the same or different document anytime to get fresh recommendations</p>
+                    </div>
+                </div>
+
+                <!-- Getting Help -->
+                <div class="help-section help-section-last">
+                    <h3>📞 Need More Help?</h3>
+                    <p>This tool uses AI to improve document readability. Results are suggestions—always review before making changes to your documents.</p>
+                    <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">Created to help technical writers enhance documentation with strategic visual aids.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='app.js', v='20260626a') }}"></script>
 </body>
