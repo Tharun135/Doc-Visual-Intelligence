@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import csv
 import os
 import tempfile
@@ -10,6 +10,7 @@ from analyzers.section_splitter import split_sections
 from analyzers.visual_detector import detect_visuals, compute_signals
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
 
 ALLOWED_EXTENSIONS = {".txt", ".md", ".json", ".pdf", ".docx"}
 MAX_UPLOAD_MB = 25
@@ -114,10 +115,12 @@ def feedback():
 @app.route("/", methods=["GET", "POST"])
 def home():
 
-    results = []
-    original_text = ""
-    input_source = "" # 'file' or 'text' or ''
-    upload_error = ""
+    # Read any payload produced by a previous POST (PRG pattern).
+    post_state = session.pop("home_post_state", None)
+    results = post_state.get("results", []) if post_state else []
+    original_text = post_state.get("original_text", "") if post_state else ""
+    input_source = post_state.get("input_source", "") if post_state else ""  # 'file' or 'text' or ''
+    upload_error = post_state.get("upload_error", "") if post_state else ""
 
     if request.method == "POST":
         file = request.files.get("document")
@@ -180,6 +183,14 @@ def home():
                     "step_lines": step_lines,
                     "suggestions": suggestions
                 })
+
+        session["home_post_state"] = {
+            "results": results,
+            "original_text": original_text,
+            "input_source": input_source,
+            "upload_error": upload_error,
+        }
+        return redirect(url_for("home"))
 
     return render_template(
         "index.html",

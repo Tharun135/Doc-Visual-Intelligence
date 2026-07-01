@@ -229,6 +229,16 @@ def _count_choice_option_markers(content_lower: str) -> int:
     return _word_hits(content_lower, markers)
 
 
+def _count_ui_action_sentences(content: str) -> int:
+    """Count sentences that start with a concrete UI action verb."""
+    pattern = (
+        r"(?:^|[.!?]\s+)"
+        r"(?:please\s+)?"
+        r"(click|select|open|enter|type|choose|navigate|save|apply|toggle|check|uncheck|expand|collapse|drag|drop|upload|download|import|export)\b"
+    )
+    return len(re.findall(pattern, content, re.IGNORECASE))
+
+
 def compute_signals(content: str) -> dict:
     content_lower = content.lower()
     step_lines = _extract_steps(content)
@@ -242,6 +252,7 @@ def compute_signals(content: str) -> dict:
     conditional_branches = _count_conditional_branches(content)
     validation_gate_branches = _count_validation_gate_branches(content)
     choice_option_markers = _count_choice_option_markers(content_lower)
+    ui_action_sentences = _count_ui_action_sentences(content)
     word_count = len(content.split())
 
     complexity_score = round(
@@ -275,6 +286,7 @@ def compute_signals(content: str) -> dict:
         "conditional_branches": conditional_branches,
         "validation_gate_branches": validation_gate_branches,
         "choice_option_markers": choice_option_markers,
+        "ui_action_sentences": ui_action_sentences,
         "word_count": word_count,
         "complexity_score": complexity_score,
         # density metrics

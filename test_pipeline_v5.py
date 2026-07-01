@@ -32,6 +32,21 @@ def test_pr002_screenshot():
     assert top["visual_type"] == "Screenshot"
     assert top["reader_question"] == "Where do I click?"
 
+def test_non_procedural_ui_text_does_not_force_screenshot():
+    # Autostart-like narrative text with UI terms but no real procedural structure.
+    content = (
+        'Set a project to autostart mode by activating the "Enable Autostart" option. '
+        "The autostart feature is beneficial when an application or IE Device is restarted. "
+        'Launch the runtime home page and click "Enable Autostart" to set the selected project. '
+        'To change autostart, select a different project and click "Enable Autostart" again. '
+        'To disable it, select the project and click "Disable Autostart".'
+    )
+    results = detect_visuals("Enabling autostart", content)
+
+    recommended_types = [r["visual_type"] for r in results]
+    assert "Screenshot" not in recommended_types
+    assert "GIF / Video Tutorial" not in recommended_types
+
 def test_pr003_workflow_diagram():
     # Long procedure
     content = """

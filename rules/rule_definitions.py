@@ -255,6 +255,8 @@ def _match_pr_screenshot(signals: dict) -> Optional[RuleResult]:
     ui = signals["ui_interactions"]
     ui_density = signals.get("ui_density", 0.0)
     steps = signals["steps"]
+    verifications = signals.get("verifications", 0)
+    ui_action_sentences = signals.get("ui_action_sentences", 0)
 
     # Required gate: meaningful UI interaction density
     if ui_density < 2.0:
@@ -264,11 +266,16 @@ def _match_pr_screenshot(signals: dict) -> Optional[RuleResult]:
     if steps <= 1 and ui_density < 3.0 and signals["word_count"] < 25:
         return None
 
+    # Hard block: require either extracted step structure or explicit imperative
+    # UI-action sentences. This blocks narrative prose with scattered UI terms.
+    if steps < 2 and ui_action_sentences < 3:
+        return None
+
     # Formula components (named, bounded):
     components = {
         "ui_density_score": min(45, int(ui_density * 8)),                       # 0–45: primary signal
         "step_coverage":    min(20, steps * 3),                                  # 0–20: each step = 3
-        "checkpoint_score": min(10, signals.get("verifications", 0) * 5),       # 0–10: verify = 5
+        "checkpoint_score": min(10, verifications * 5),       # 0–10: verify = 5
     }
     confidence = _formula_confidence(base=25, components=components)
 
@@ -293,7 +300,7 @@ def _match_pr_screenshot(signals: dict) -> Optional[RuleResult]:
     evidence = [f"UI density: {ui_density:.1f} interactions per 100 words ({ui} total)"]
     if steps >= 3:
         evidence.append(f"{steps} procedural steps guide user through the UI")
-    if signals.get("verifications", 0) >= 1:
+    if verifications >= 1:
         evidence.append("Verification step detected — screenshot confirms expected state")
 
     if steps >= 8 and ui_density >= 3.0:
