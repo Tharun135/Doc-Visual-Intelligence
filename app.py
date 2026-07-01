@@ -2,15 +2,20 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 import csv
 import os
 import tempfile
+import uuid
 from datetime import datetime
 from pathlib import Path
 from werkzeug.exceptions import RequestEntityTooLarge
 from analyzers.text_extractor import extract_text
 from analyzers.section_splitter import split_sections
 from analyzers.visual_detector import detect_visuals, compute_signals
+from mcp.plantuml_server import render_plantuml
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
+
+# Keep large POST payloads server-side to avoid overflowing cookie-based sessions.
+POST_STATE_CACHE = {}
 
 ALLOWED_EXTENSIONS = {".txt", ".md", ".json", ".pdf", ".docx"}
 MAX_UPLOAD_MB = 25
@@ -116,7 +121,8 @@ def feedback():
 def home():
 
     # Read any payload produced by a previous POST (PRG pattern).
-    post_state = session.pop("home_post_state", None)
+    post_state_id = session.pop("home_post_state_id", None)
+    post_state = POST_STATE_CACHE.pop(post_state_id, None) if post_state_id else None
     results = post_state.get("results", []) if post_state else []
     original_text = post_state.get("original_text", "") if post_state else ""
     input_source = post_state.get("input_source", "") if post_state else ""  # 'file' or 'text' or ''
@@ -184,12 +190,14 @@ def home():
                     "suggestions": suggestions
                 })
 
-        session["home_post_state"] = {
+        post_state_id = uuid.uuid4().hex
+        POST_STATE_CACHE[post_state_id] = {
             "results": results,
             "original_text": original_text,
             "input_source": input_source,
             "upload_error": upload_error,
         }
+        session["home_post_state_id"] = post_state_id
         return redirect(url_for("home"))
 
     return render_template(
@@ -212,6 +220,23 @@ def handle_file_too_large(_error):
         feedback_summary=_load_feedback_summary(),
         upload_error=f"File is too large. Maximum allowed size is {MAX_UPLOAD_MB}MB.",
     ), 413
+
+
+@app.route("/generate/plantuml", methods=["POST"])
+def generate_plantuml_route():
+    """Render PlantUML source code to SVG via the MCP server."""
+    payload = request.get_json(silent=True) or {}
+    code = str(payload.get("code", "")).strip()
+
+    if not code:
+        return jsonify({"ok": False, "error": "No PlantUML code provided"}), 400
+
+    svg, error = render_plantuml(code)
+
+    if error or not svg:
+        return jsonify({"ok": False, "error": error or "Render produced no output"}), 500
+
+    return jsonify({"ok": True, "svg": svg})
 
 
 if __name__ == "__main__":

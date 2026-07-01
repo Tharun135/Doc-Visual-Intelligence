@@ -14,6 +14,7 @@ import logging
 from pathlib import Path
 
 from rules.rule_definitions import PYTHON_RULES, RuleResult
+from generators.plantuml_generator import generate as generate_plantuml
 
 logger = logging.getLogger(__name__)
 
@@ -811,6 +812,8 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             "confidence": 0,
             "confidence_category": "Low",
             "priority": "Low",
+            "generator": "none",
+            "plantuml_code": None,
             "content_type": content_type,
             "content_type_confidence": content_type_confidence,
             "complexity_score": signals["complexity_score"],
@@ -846,6 +849,11 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
         )
         placement_hint = _suggest_placement(result.visual_type, content_type, signals)
         insertion_snippet = _build_insertion_snippet(result.visual_type, generated_artifact, placement_hint)
+        generator = _assign_generator(result.visual_type)
+        plantuml_code = (
+            generate_plantuml(result.visual_type, title, signals, content)
+            if generator == "plantuml" else None
+        )
 
         python_hits.append({
             "visual_type": result.visual_type,
@@ -856,6 +864,8 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             # priority is set by the rule directly (independent of confidence)
             "priority": result.priority,
             "reader_value": result.reader_value,
+            "generator": generator,
+            "plantuml_code": plantuml_code,
             "content_type": content_type,
             "content_type_confidence": content_type_confidence,
             "complexity_score": signals["complexity_score"],
@@ -886,7 +896,14 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
         )
         placement_hint = _suggest_placement(hit["visual_type"], content_type, signals)
         insertion_snippet = _build_insertion_snippet(hit["visual_type"], generated_artifact, placement_hint)
+        generator = _assign_generator(hit["visual_type"])
+        plantuml_code = (
+            generate_plantuml(hit["visual_type"], title, signals, content)
+            if generator == "plantuml" else None
+        )
         hit.update({
+            "generator": generator,
+            "plantuml_code": plantuml_code,
             "content_type": content_type,
             "content_type_confidence": content_type_confidence,
             "complexity_score": signals["complexity_score"],
@@ -958,6 +975,8 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             "confidence": 0,
             "confidence_category": "Low",
             "priority": "Low",
+            "generator": "none",
+            "plantuml_code": None,
             "content_type": content_type,
             "content_type_confidence": content_type_confidence,
             "complexity_score": signals["complexity_score"],
@@ -1016,3 +1035,38 @@ def _suggest_content(visual_type: str, title: str, signals: dict) -> str:
         return "Provide a minimal working example with inline comments on each key field."
 
     return "Provide a concise visual that reduces cognitive load for the core concept in this section."
+
+
+# ─────────────────────────────────────────────
+# Generator assignment
+# Maps each visual type to the tool that should
+# produce it.  The orchestrator reads this field
+# to dispatch to the correct MCP server.
+# ─────────────────────────────────────────────
+
+_GENERATOR_MAP: dict[str, str] = {
+    # Diagram types — PlantUML renders these deterministically
+    "Workflow Diagram":       "plantuml",
+    "Sequence Diagram":       "plantuml",
+    "Decision Tree":          "plantuml",
+    "Architecture Diagram":   "plantuml",
+    "Topology Diagram":       "plantuml",
+    "Data Flow Diagram":      "plantuml",
+    "Flowchart":              "plantuml",
+    # Table types — Mermaid renders inline Markdown tables cleanly
+    "Comparison Table":       "mermaid",
+    "Mapping Table":          "mermaid",
+    # Physical/UI capture — requires a browser session
+    "Screenshot":             "browser",
+    "Configuration Screenshot": "browser",
+    "Annotated Screenshot":   "browser",
+    "GIF / Video Tutorial":   "browser",
+    # Lookup in the documentation asset repository
+    "Illustration":           "filesystem",
+    "Code Example":           "filesystem",
+}
+
+
+def _assign_generator(visual_type: str) -> str:
+    """Return the generator key for a given visual type.  Falls back to 'none'."""
+    return _GENERATOR_MAP.get(visual_type, "none")

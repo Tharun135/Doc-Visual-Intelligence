@@ -1,0 +1,124 @@
+!theme plain
+' ────────────────────────────────────────────────────────────────
+' Doc-Visual-Intelligence Corporate Theme for PlantUML
+' ────────────────────────────────────────────────────────────────
+' This theme centralizes all styling for workflow, sequence,
+' component, and decision diagrams to ensure visual consistency
+' across the entire documentation pipeline.
+' ────────────────────────────────────────────────────────────────
+
+' ─── Colors ───────────────────────────────────────────────────
+' Documentation-friendly palette with high contrast for both
+' light and dark themes.
+
+!define COLOR_PRIMARY      #1976D2
+!define COLOR_PRIMARY_DK   #0D47A1
+!define COLOR_ACCENT       #FFA726
+!define COLOR_SUCCESS      #43A047
+!define COLOR_WARNING      #FB8C00
+!define COLOR_ERROR        #E53935
+!define COLOR_CONNECTOR    #455A64
+!define COLOR_TEXT         #1A1A1A
+!define COLOR_TEXT_LIGHT   #FAFAFA
+!define COLOR_BORDER       #37474F
+
+' ─── Typography ───────────────────────────────────────────────
+skinparam DefaultFontFamily "Segoe UI", "Roboto", sans-serif
+skinparam DefaultFontSize 14
+skinparam DefaultFontStyle normal
+skinparam DefaultFontColor COLOR_TEXT
+
+' ─── Title Styling ────────────────────────────────────────────
+skinparam TitleFontSize 18
+skinparam TitleFontStyle bold
+skinparam TitleFontColor COLOR_PRIMARY_DK
+
+' ─── Activity Diagram Styling ─────────────────────────────────
+skinparam activity {
+    BackgroundColor    COLOR_PRIMARY
+    BorderColor        COLOR_PRIMARY_DK
+    BorderThickness    2
+    FontColor          COLOR_TEXT_LIGHT
+    FontName           "Segoe UI", "Roboto", sans-serif
+    FontSize           14
+    FontStyle          normal
+    Padding            16
+    Margin             8
+}
+
+skinparam activityDiamond {
+    BackgroundColor    COLOR_ACCENT
+    BorderColor        #E65100
+    BorderThickness    2
+    FontColor          COLOR_TEXT
+    FontSize           14
+}
+
+skinparam activityBar {
+    BackgroundColor    COLOR_SUCCESS
+    BorderColor        #2E7D32
+    BorderThickness    2
+}
+
+' ─── Arrow/Connector Styling ──────────────────────────────────
+skinparam Arrow {
+    Color              COLOR_CONNECTOR
+    FontColor          COLOR_TEXT
+    FontSize           12
+    Thickness          3
+    LineStyle          solid
+}
+
+skinparam Connector {
+    LineStyle          solid
+    LineThickness      3
+}
+
+' ─── Start/End Node Styling ───────────────────────────────────
+skinparam Start {
+    BackgroundColor    COLOR_SUCCESS
+    BorderColor        #2E7D32
+    BorderThickness    3
+}
+
+skinparam End {
+    BackgroundColor    COLOR_ERROR
+    BorderColor        #B71C1C
+    BorderThickness    3
+}
+
+' ─── Default Styling ──────────────────────────────────────────
+skinparam Default {
+    FontColor          COLOR_TEXT
+    FontSize           14
+}
+
+' ─── Legend & Component Styling ───────────────────────────────
+skinparam Component {
+    BackgroundColor    COLOR_PRIMARY
+    BorderColor        COLOR_PRIMARY_DK
+    BorderThickness    2
+    FontColor          COLOR_TEXT_LIGHT
+}
+
+skinparam Sequence {
+    ActorBackgroundColor   COLOR_PRIMARY
+    ActorBorderColor       COLOR_PRIMARY_DK
+    ActorFontColor         COLOR_TEXT_LIGHT
+    ParticipantBackgroundColor  COLOR_PRIMARY
+    ParticipantBorderColor      COLOR_PRIMARY_DK
+    ParticipantFontColor        COLOR_TEXT_LIGHT
+}
+
+' ─── Backgrounds & Padding ────────────────────────────────────
+skinparam backgroundColor transparent
+skinparam Padding 20
+skinparam Margin 10
+
+' ─── ClassDiagram Styling ─────────────────────────────────────
+skinparam Class {
+    BackgroundColor    COLOR_PRIMARY
+    BorderColor        COLOR_PRIMARY_DK
+    BorderThickness    2
+    FontColor          COLOR_TEXT_LIGHT
+}

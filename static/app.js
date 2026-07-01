@@ -506,6 +506,64 @@ function initFeedbackButtons() {
     });
 }
 
+/**
+ * PlantUML render button — calls /generate/plantuml and injects the SVG.
+ */
+function initPlantUMLRenderButtons() {
+    document.querySelectorAll('.plantuml-render-btn').forEach(button => {
+        if (button.dataset.bound === 'true') return;
+        button.dataset.bound = 'true';
+
+        button.addEventListener('click', async () => {
+            const artifactId = button.dataset.artifactId;
+            const code = button.dataset.plantuml;
+            if (!artifactId || !code) return;
+
+            const container = document.getElementById(`${artifactId}-plantuml-container`);
+            const preview   = document.getElementById(`${artifactId}-plantuml-preview`);
+            const status    = document.getElementById(`${artifactId}-plantuml-status`);
+
+            if (!container || !preview) return;
+
+            // Show the output panel and update state
+            container.classList.remove('artifact-hidden');
+            button.setAttribute('disabled', 'disabled');
+            button.textContent = 'Rendering…';
+            if (status) { status.textContent = 'Rendering'; status.style.color = 'var(--text-muted)'; }
+            preview.innerHTML = '<span style="color:var(--text-muted);font-size:0.85rem;">Contacting PlantUML server…</span>';
+
+            try {
+                const response = await fetch('/generate/plantuml', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.ok) {
+                    throw new Error(data.error || `Server error ${response.status}`);
+                }
+
+                // Inject SVG — make it responsive
+                let svg = data.svg;
+                svg = svg.replace(/<svg /, '<svg style="max-width:100%;height:auto;" ');
+                preview.innerHTML = svg;
+
+                if (status) { status.textContent = 'OK'; status.style.color = 'var(--confidence-high, #4ade80)'; }
+                button.textContent = '✓ Rendered';
+                button.classList.add('inserted');
+
+            } catch (err) {
+                preview.innerHTML = `<span style="color:var(--error-color,#f87171);font-size:0.85rem;">Render failed: ${err.message}</span>`;
+                if (status) { status.textContent = 'Error'; status.style.color = 'var(--error-color,#f87171)'; }
+                button.removeAttribute('disabled');
+                button.textContent = 'Retry';
+            }
+        });
+    });
+}
+
 // Placement highlight: "Show in text" button handler
 function initPlacementHighlight() {
     document.querySelectorAll('.show-in-text-btn').forEach(button => {
@@ -659,6 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(initInsertButtons, 100);
     setTimeout(initPlacementHighlight, 100);
     setTimeout(initFeedbackButtons, 100);
+    setTimeout(initPlantUMLRenderButtons, 100);
 });
 
 // Also reinit when results are refreshed
@@ -669,6 +728,7 @@ const observer = new MutationObserver(() => {
     initInsertButtons();
     initPlacementHighlight();
     initFeedbackButtons();
+    initPlantUMLRenderButtons();
 });
 
 /**

@@ -305,6 +305,18 @@
                                                             </svg>
                                                             Generate {{ suggestion.visual_type }}
                                                         </button>
+                                                        {% if suggestion.plantuml_code %}
+                                                        <button type="button"
+                                                                class="insert-visual-btn plantuml-render-btn"
+                                                                data-artifact-id="{{ artifact_id }}"
+                                                                data-plantuml="{{ suggestion.plantuml_code | e }}">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                <circle cx="12" cy="12" r="10"></circle>
+                                                                <polyline points="12 8 12 12 14 14"></polyline>
+                                                            </svg>
+                                                            Render via PlantUML
+                                                        </button>
+                                                        {% endif %}
                                                     </div>
                                                     <div id="{{ artifact_id }}-container" class="artifact-box artifact-hidden">
                                                         <div class="sim-label artifact-header">
@@ -328,6 +340,27 @@
                                                         </div>
 
                                                     </div>
+
+                                                    {% if suggestion.plantuml_code %}
+                                                    <div id="{{ artifact_id }}-plantuml-container" class="artifact-box artifact-hidden" style="margin-top:0.75rem;">
+                                                        <div class="sim-label artifact-header">
+                                                            <span>PlantUML — Rendered SVG</span>
+                                                            <span class="status" id="{{ artifact_id }}-plantuml-status">Pending</span>
+                                                        </div>
+                                                        <div id="{{ artifact_id }}-plantuml-preview" class="artifact-preview-box" style="min-height:80px; display:flex; align-items:center; justify-content:center;">
+                                                            <span class="artifact-preview-label" style="color:var(--text-muted);">SVG will appear here after rendering.</span>
+                                                        </div>
+                                                        <div class="artifact-code-grid" style="margin-top:0.5rem;">
+                                                            <div class="artifact-code-panel">
+                                                                <div class="artifact-code-header">
+                                                                    <span>PlantUML Source</span>
+                                                                    <button type="button" class="copy-artifact-btn" data-copy-target="{{ artifact_id }}-puml-src">Copy</button>
+                                                                </div>
+                                                                <pre id="{{ artifact_id }}-puml-src" class="artifact-code-block">{{ suggestion.plantuml_code }}</pre>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {% endif %}
                                                 {% endif %}
 
                                                 {% if suggestion.package_items %}
