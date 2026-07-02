@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 998" role="img" aria-label="Process Dump Generation Fails flow diagram">
+  <defs>
+    <marker id="stepArrow" markerWidth="18" markerHeight="18" refX="7" refY="7" orient="auto">
+      <path d="M0,0 L14,7 L0,14 z" fill="#00646E"/>
+    </marker>
+  </defs>
+  <rect width="980" height="998" fill="#000028" rx="20" ry="20"/>
+  <g>
+    <text x="490" y="52" text-anchor="middle" fill="#FFFFFF" font-size="35" font-weight="700" font-family="Segoe UI, Roboto, sans-serif">Process Dump Generation Fails</text>
+    <line x1="290" y1="74" x2="690" y2="74" stroke="#009999" stroke-width="2.2" opacity="0.9"/>
+    <text x="490" y="102" text-anchor="middle" fill="#A6F7E5" font-size="13" font-family="Segoe UI, Roboto, sans-serif" letter-spacing="1">4 STEPS</text>
+  </g>
+  <line x1="490" y1="272" x2="490" y2="358" stroke="#00646E" stroke-width="3.2" stroke-dasharray="6 8" opacity="0.96" marker-end="url(#stepArrow)"/>
+  <circle cx="200" cy="200" r="18" fill="#000028" stroke="#009999" stroke-width="2.4"/>
+  <text x="200" y="206" text-anchor="middle" fill="#FFFFFF" font-size="20" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">1</text>
+  <rect x="180" y="140" width="620" height="120" rx="16" ry="16" fill="#FFEB3B" stroke="#FDD835" stroke-width="2.8"/>
+  <text x="244" y="180" fill="#000028" font-size="17" font-family="Segoe UI, Roboto, sans-serif" opacity="0.92" letter-spacing="0.6">VALIDATION</text>
+  <text x="244" y="222" fill="#000028" font-size="22" font-family="Segoe UI, Roboto, sans-serif" font-weight="600">✓ Verify process</text>
+  <line x1="490" y1="502" x2="490" y2="588" stroke="#00646E" stroke-width="3.2" stroke-dasharray="6 8" opacity="0.96" marker-end="url(#stepArrow)"/>
+  <circle cx="200" cy="430" r="18" fill="#000028" stroke="#009999" stroke-width="2.4"/>
+  <text x="200" y="436" text-anchor="middle" fill="#FFFFFF" font-size="20" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">2</text>
+  <rect x="180" y="370" width="620" height="120" rx="16" ry="16" fill="#009999" stroke="#00646E" stroke-width="2.8"/>
+  <text x="244" y="410" fill="#FFFFFF" font-size="17" font-family="Segoe UI, Roboto, sans-serif" opacity="0.92" letter-spacing="0.6">SYSTEM</text>
+  <text x="244" y="452" fill="#FFFFFF" font-size="22" font-family="Segoe UI, Roboto, sans-serif" font-weight="600">⚙ Generate dump</text>
+  <line x1="490" y1="732" x2="490" y2="818" stroke="#00646E" stroke-width="3.2" stroke-dasharray="6 8" opacity="0.96" marker-end="url(#stepArrow)"/>
+  <circle cx="200" cy="660" r="18" fill="#000028" stroke="#009999" stroke-width="2.4"/>
+  <text x="200" y="666" text-anchor="middle" fill="#FFFFFF" font-size="20" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">3</text>
+  <rect x="180" y="600" width="620" height="120" rx="16" ry="16" fill="#009999" stroke="#00646E" stroke-width="2.8"/>
+  <text x="244" y="640" fill="#FFFFFF" font-size="17" font-family="Segoe UI, Roboto, sans-serif" opacity="0.92" letter-spacing="0.6">SYSTEM</text>
+  <text x="244" y="682" fill="#FFFFFF" font-size="22" font-family="Segoe UI, Roboto, sans-serif" font-weight="600">⚙ Check disk space</text>
+  <circle cx="200" cy="890" r="18" fill="#000028" stroke="#009999" stroke-width="2.4"/>
+  <text x="200" y="896" text-anchor="middle" fill="#FFFFFF" font-size="20" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">4</text>
+  <rect x="180" y="830" width="620" height="120" rx="16" ry="16" fill="#FFEB3B" stroke="#FDD835" stroke-width="2.8"/>
+  <text x="244" y="870" fill="#000028" font-size="17" font-family="Segoe UI, Roboto, sans-serif" opacity="0.92" letter-spacing="0.6">VALIDATION</text>
+  <text x="244" y="912" fill="#000028" font-size="22" font-family="Segoe UI, Roboto, sans-serif" font-weight="600">✓ Verify permissions</text>
+</svg>

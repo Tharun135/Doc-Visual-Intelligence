@@ -8,117 +8,124 @@
 ' ────────────────────────────────────────────────────────────────
 
 ' ─── Colors ───────────────────────────────────────────────────
-' Documentation-friendly palette with high contrast for both
-' light and dark themes.
+' Siemens documentation-diagram palette.
 
-!define COLOR_PRIMARY      #1976D2
-!define COLOR_PRIMARY_DK   #0D47A1
-!define COLOR_ACCENT       #FFA726
-!define COLOR_SUCCESS      #43A047
-!define COLOR_WARNING      #FB8C00
-!define COLOR_ERROR        #E53935
-!define COLOR_CONNECTOR    #455A64
-!define COLOR_TEXT         #1A1A1A
-!define COLOR_TEXT_LIGHT   #FAFAFA
-!define COLOR_BORDER       #37474F
+!define COLOR_BG           #000028
+!define COLOR_ACTIVITY     #009999
+!define COLOR_ACTIVITY_DK  #00646E
+!define COLOR_DECISION     #FFD732
+!define COLOR_DECISION_DK  #F7C600
+!define COLOR_START        #00FFB9
+!define COLOR_END          #EF0137
+!define COLOR_CONNECTOR    #00646E
+!define COLOR_TEXT_DARK    #000028
+!define COLOR_TEXT_LIGHT   #FFFFFF
 
 ' ─── Typography ───────────────────────────────────────────────
 skinparam DefaultFontFamily "Segoe UI", "Roboto", sans-serif
 skinparam DefaultFontSize 14
 skinparam DefaultFontStyle normal
-skinparam DefaultFontColor COLOR_TEXT
+skinparam DefaultFontColor COLOR_TEXT_LIGHT
+skinparam Shadowing false
 
 ' ─── Title Styling ────────────────────────────────────────────
 skinparam TitleFontSize 18
 skinparam TitleFontStyle bold
-skinparam TitleFontColor COLOR_PRIMARY_DK
+skinparam TitleFontColor COLOR_TEXT_LIGHT
 
 ' ─── Activity Diagram Styling ─────────────────────────────────
 skinparam activity {
-    BackgroundColor    COLOR_PRIMARY
-    BorderColor        COLOR_PRIMARY_DK
-    BorderThickness    2
+    BackgroundColor    COLOR_ACTIVITY
+    BorderColor        COLOR_ACTIVITY_DK
+    BorderThickness    3
     FontColor          COLOR_TEXT_LIGHT
     FontName           "Segoe UI", "Roboto", sans-serif
-    FontSize           14
+    FontSize           15
     FontStyle          normal
-    Padding            16
-    Margin             8
+    Padding            20
+    Margin             14
 }
 
 skinparam activityDiamond {
-    BackgroundColor    COLOR_ACCENT
-    BorderColor        #E65100
-    BorderThickness    2
-    FontColor          COLOR_TEXT
-    FontSize           14
+    BackgroundColor    COLOR_DECISION
+    BorderColor        COLOR_DECISION_DK
+    BorderThickness    3
+    FontColor          COLOR_TEXT_DARK
+    FontSize           15
 }
 
 skinparam activityBar {
-    BackgroundColor    COLOR_SUCCESS
-    BorderColor        #2E7D32
+    BackgroundColor    COLOR_ACTIVITY
+    BorderColor        COLOR_ACTIVITY_DK
     BorderThickness    2
 }
 
 ' ─── Arrow/Connector Styling ──────────────────────────────────
 skinparam Arrow {
     Color              COLOR_CONNECTOR
-    FontColor          COLOR_TEXT
-    FontSize           12
-    Thickness          3
+    FontColor          COLOR_TEXT_LIGHT
+    FontSize           13
+    Thickness          4
     LineStyle          solid
 }
 
 skinparam Connector {
     LineStyle          solid
-    LineThickness      3
+    LineThickness      4
 }
 
 ' ─── Start/End Node Styling ───────────────────────────────────
 skinparam Start {
-    BackgroundColor    COLOR_SUCCESS
-    BorderColor        #2E7D32
+    BackgroundColor    COLOR_START
+    BorderColor        COLOR_ACTIVITY_DK
     BorderThickness    3
 }
 
 skinparam End {
-    BackgroundColor    COLOR_ERROR
-    BorderColor        #B71C1C
+    BackgroundColor    COLOR_END
+    BorderColor        COLOR_END
     BorderThickness    3
 }
 
+skinparam activityStartColor COLOR_START
+skinparam activityEndColor COLOR_END
+skinparam activityArrowColor COLOR_CONNECTOR
+skinparam ArrowThickness 4
+skinparam nodesep 70
+skinparam ranksep 90
+
 ' ─── Default Styling ──────────────────────────────────────────
 skinparam Default {
-    FontColor          COLOR_TEXT
+    FontColor          COLOR_TEXT_LIGHT
     FontSize           14
 }
 
 ' ─── Legend & Component Styling ───────────────────────────────
 skinparam Component {
-    BackgroundColor    COLOR_PRIMARY
-    BorderColor        COLOR_PRIMARY_DK
+    BackgroundColor    COLOR_ACTIVITY
+    BorderColor        COLOR_ACTIVITY_DK
     BorderThickness    2
     FontColor          COLOR_TEXT_LIGHT
 }
 
 skinparam Sequence {
-    ActorBackgroundColor   COLOR_PRIMARY
-    ActorBorderColor       COLOR_PRIMARY_DK
+    ActorBackgroundColor   COLOR_ACTIVITY
+    ActorBorderColor       COLOR_ACTIVITY_DK
     ActorFontColor         COLOR_TEXT_LIGHT
-    ParticipantBackgroundColor  COLOR_PRIMARY
-    ParticipantBorderColor      COLOR_PRIMARY_DK
+    ParticipantBackgroundColor  COLOR_ACTIVITY
+    ParticipantBorderColor      COLOR_ACTIVITY_DK
     ParticipantFontColor        COLOR_TEXT_LIGHT
 }
 
 ' ─── Backgrounds & Padding ────────────────────────────────────
-skinparam backgroundColor transparent
+skinparam backgroundColor COLOR_BG
 skinparam Padding 20
 skinparam Margin 10
 
 ' ─── ClassDiagram Styling ─────────────────────────────────────
 skinparam Class {
-    BackgroundColor    COLOR_PRIMARY
-    BorderColor        COLOR_PRIMARY_DK
+    BackgroundColor    COLOR_ACTIVITY
+    BorderColor        COLOR_ACTIVITY_DK
     BorderThickness    2
     FontColor          COLOR_TEXT_LIGHT
 }

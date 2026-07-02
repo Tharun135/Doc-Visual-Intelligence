@@ -36,32 +36,42 @@ class DiagramStyle:
     # Corporate theme — inline for PlantUML API compatibility
     # (public API cannot resolve !include directives)
     THEME_LINES = [
-        "' Corporate theme styling",
+        "' Siemens documentation-diagram theme",
         'skinparam DefaultFontFamily "Segoe UI", "Roboto", sans-serif',
         "skinparam DefaultFontSize 14",
+        "skinparam Shadowing false",
         "skinparam TitleFontSize 18",
         "skinparam TitleFontStyle bold",
+        "skinparam TitleFontColor #FFFFFF",
         "skinparam activity {",
-        "    BackgroundColor    #1976D2",
-        "    BorderColor        #0D47A1",
-        "    BorderThickness    2",
-        "    FontColor          #FAFAFA",
+        "    BackgroundColor    #009999",
+        "    BorderColor        #00646E",
+        "    BorderThickness    3",
+        "    FontColor          #FFFFFF",
+        "    FontSize           15",
+        "    Padding            20",
+        "    Margin             14",
         "}",
         "skinparam activityDiamond {",
-        "    BackgroundColor    #FFA726",
-        "    BorderColor        #E65100",
-        "    BorderThickness    2",
+        "    BackgroundColor    #FFD732",
+        "    BorderColor        #F7C600",
+        "    BorderThickness    3",
+        "    FontColor          #000028",
+        "    FontSize           15",
         "}",
         "skinparam Arrow {",
-        "    Color              #455A64",
-        "    Thickness          3",
+        "    Color              #00646E",
+        "    FontColor          #FFFFFF",
+        "    FontSize           13",
+        "    Thickness          4",
         "}",
-        "skinparam Start {",
-        "    BackgroundColor    #43A047",
-        "}",
-        "skinparam End {",
-        "    BackgroundColor    #E53935",
-        "}",
+        "skinparam activityStartColor #00FFB9",
+        "skinparam activityEndColor #EF0137",
+        "skinparam activityArrowColor #00646E",
+        "skinparam ArrowThickness 4",
+        "skinparam nodesep 70",
+        "skinparam ranksep 90",
+        "skinparam backgroundColor #000028",
     ]
     
     # Spacing and sizing
@@ -334,13 +344,15 @@ def generate_decision(title: str, content: str) -> str | None:
 
     lines = [
         "@startuml",
-        DiagramStyle.THEME_INCLUDE,
+    ]
+    lines.extend(DiagramStyle.THEME_LINES)
+    lines.extend([
         "",
         f"title {_sanitize(title)}",
         "",
         "' Decision tree showing conditional branches",
         "start",
-    ]
+    ])
 
     for cond, yes_act, no_act in conditions:
         lines.append(f"if ({cond}?) then (yes)")

@@ -277,13 +277,58 @@
 
 
 
-                                                {% if suggestion.suggested_content %}
+                                                {% if suggestion.suggested_content and (suggestion.visual_type not in ['Screenshot', 'Configuration Screenshot', 'Annotated Screenshot'] or not (suggestion.generated_artifact and suggestion.generated_artifact.specification)) %}
                                                     <div class="simulator-box" style="padding: 0.8rem 1rem; margin-top: 0.65rem;">
                                                         <div class="sim-label" style="margin-bottom: 0.4rem;">
-                                                            <span>Suggested Visual Content</span>
+                                                            <span>{% if suggestion.visual_type in ['Screenshot', 'Configuration Screenshot', 'Annotated Screenshot'] %}Capture Specification{% else %}Suggested Visual Content{% endif %}</span>
                                                             <span class="status">Draft</span>
                                                         </div>
                                                         <p class="reco-reason" style="margin: 0; color: var(--text-secondary);">{{ suggestion.suggested_content }}</p>
+                                                    </div>
+                                                {% endif %}
+
+                                                <!-- Screenshot Specification (for screenshot types) -->
+                                                {% if suggestion.visual_type in ['Screenshot', 'Configuration Screenshot', 'Annotated Screenshot'] and suggestion.generated_artifact and suggestion.generated_artifact.specification %}
+                                                    {% set spec = suggestion.generated_artifact.specification %}
+                                                    <div class="simulator-box screenshot-spec-box" style="padding: 0.8rem 1rem; margin-top: 0.65rem; border-left: 3px solid #4285F4;">
+                                                        <div class="sim-label" style="margin-bottom: 0.6rem;">
+                                                            <span>Capture Specification</span>
+                                                            <span class="status">Checklist</span>
+                                                        </div>
+
+                                                        {% if spec.capture_after %}
+                                                        <div style="margin-bottom: 0.5rem;">
+                                                            <div style="font-weight: 500; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.2rem;">Capture after</div>
+                                                            <div style="color: var(--text-primary); font-size: 0.9rem;">✓ {{ spec.capture_after }}</div>
+                                                        </div>
+                                                        {% endif %}
+
+                                                        {% if spec.capture.include %}
+                                                        <div style="margin-bottom: 0.5rem;">
+                                                            <div style="font-weight: 500; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.2rem;">Include</div>
+                                                            <ul style="margin: 0.3rem 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                                                                {% for item in spec.capture.include[:4] %}
+                                                                <li style="margin: 0.2rem 0; color: var(--text-primary);">✓ {{ item }}</li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                        </div>
+                                                        {% endif %}
+
+                                                        {% if spec.focus_area or spec.capture.highlight %}
+                                                        <div style="margin-bottom: 0.5rem;">
+                                                            <div style="font-weight: 500; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.2rem;">Primary Focus</div>
+                                                            {% if spec.focus_area %}
+                                                            <div style="color: var(--text-primary); font-size: 0.9rem;">✓ {{ spec.focus_area }}</div>
+                                                            {% else %}
+                                                            <ul style="margin: 0.3rem 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                                                                {% for item in spec.capture.highlight %}
+                                                                <li style="margin: 0.2rem 0; color: var(--text-primary);">✓ {{ item }}</li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                            {% endif %}
+                                                        </div>
+                                                        {% endif %}
+
                                                     </div>
                                                 {% endif %}
 
@@ -297,7 +342,7 @@
                                                     </div>
                                                 {% endif %}
 
-                                                {% if suggestion.generated_artifact %}
+                                                {% if suggestion.generated_artifact and suggestion.visual_type not in ['Screenshot', 'Configuration Screenshot', 'Annotated Screenshot'] %}
                                                     <div class="generate-visual-actions" style="margin-top: 0.75rem;">
                                                         <button type="button" class="insert-visual-btn generate-artifact-btn" data-target-id="{{ artifact_id }}-container" data-visual-type="{{ suggestion.visual_type }}">
                                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -327,15 +372,28 @@
                                                         <p class="artifact-summary">{{ suggestion.generated_artifact.summary }}</p>
                                                         <div class="artifact-preview-box">
                                                             <div class="artifact-preview-label">Rendered Preview</div>
+                                                            {% if suggestion.generated_artifact.svg %}
+                                                            <div class="artifact-svg-preview">{{ suggestion.generated_artifact.svg | safe }}</div>
+                                                            {% else %}
                                                             <div class="mermaid artifact-mermaid-preview" data-visual-type="{{ suggestion.visual_type }}">{{ suggestion.generated_artifact.mermaid }}</div>
+                                                            {% endif %}
                                                         </div>
                                                         <div class="artifact-code-grid">
                                                             <div class="artifact-code-panel">
                                                                 <div class="artifact-code-header">
+                                                                    {% if suggestion.generated_artifact.svg %}
+                                                                    <span>Generated SVG</span>
+                                                                    <button type="button" class="copy-artifact-btn" data-copy-target="{{ artifact_id }}-svg">Copy</button>
+                                                                    {% else %}
                                                                     <span>Generated Mermaid</span>
                                                                     <button type="button" class="copy-artifact-btn" data-copy-target="{{ artifact_id }}-mermaid">Copy</button>
+                                                                    {% endif %}
                                                                 </div>
+                                                                {% if suggestion.generated_artifact.svg %}
+                                                                <pre id="{{ artifact_id }}-svg" class="artifact-code-block">{{ suggestion.generated_artifact.svg }}</pre>
+                                                                {% else %}
                                                                 <pre id="{{ artifact_id }}-mermaid" class="artifact-code-block">{{ suggestion.generated_artifact.mermaid }}</pre>
+                                                                {% endif %}
                                                             </div>
                                                         </div>
 
@@ -428,11 +486,11 @@
                                                             </div>
                                                         </div>
                                                     </div>
-                                                {% elif suggestion.visual_type == "Screenshot" %}
+                                                {% elif suggestion.visual_type in ["Screenshot", "Configuration Screenshot", "Annotated Screenshot"] and not (suggestion.generated_artifact and suggestion.generated_artifact.specification) %}
                                                     <div class="simulator-box">
                                                         <div class="sim-label">
-                                                            <span>Screenshot Camera Highlight</span>
-                                                            <span class="status">Camera Range</span>
+                                                            <span>Primary Focus</span>
+                                                            <span class="status">Capture Context</span>
                                                         </div>
                                                         <div class="screenshot-sim">
                                                             <div class="browser-header">
@@ -441,7 +499,11 @@
                                                                     <div class="browser-dot yellow"></div>
                                                                     <div class="browser-dot green"></div>
                                                                 </div>
-                                                                <div class="browser-url">siemens-hmi-admin.local/config</div>
+                                                                {% if suggestion.generated_artifact and suggestion.generated_artifact.specification and suggestion.generated_artifact.specification.context %}
+                                                                <div class="browser-url">Page: {{ suggestion.generated_artifact.specification.context.page or 'Current page' }} | Section: {{ suggestion.generated_artifact.specification.context.section or 'Main work area' }} | Dialog: {{ suggestion.generated_artifact.specification.context.dialog or 'None' }}</div>
+                                                                {% else %}
+                                                                <div class="browser-url">Capture context preview</div>
+                                                                {% endif %}
                                                             </div>
                                                             <div class="browser-body">
                                                                 <div class="mock-sidebar">
@@ -464,6 +526,9 @@
                                                                     <div class="corner-marker top-right"></div>
                                                                     <div class="corner-marker bottom-left"></div>
                                                                     <div class="corner-marker bottom-right"></div>
+                                                                    {% if suggestion.generated_artifact and suggestion.generated_artifact.specification and suggestion.generated_artifact.specification.focus_area %}
+                                                                    <div style="position:absolute; left:8px; top:8px; font-size:0.7rem; color:#fff; background:rgba(0,0,0,0.45); padding:0.15rem 0.35rem; border-radius:4px;">{{ suggestion.generated_artifact.specification.focus_area }}</div>
+                                                                    {% endif %}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -508,34 +573,14 @@
                                                         </div>
                                                     </div>
                                                 {% elif suggestion.visual_type == "Architecture Diagram" and not suggestion.generated_artifact %}
-                                                    <div class="simulator-box">
-                                                        <div class="sim-label">
-                                                            <span>System Architecture Nodes</span>
-                                                            <span class="status">Data Connected</span>
+                                                    <div class="simulator-box" style="padding: 0.85rem 1rem; margin-top: 0.7rem;">
+                                                        <div class="sim-label" style="margin-bottom: 0.45rem;">
+                                                            <span>Architecture extraction status</span>
+                                                            <span class="status">No graph generated</span>
                                                         </div>
-                                                        <div class="arch-sim">
-                                                            <svg class="arch-connections">
-                                                                <line x1="170" y1="30" x2="170" y2="100" class="active"></line>
-                                                                <line x1="170" y1="100" x2="60" y2="100" class="active"></line>
-                                                                <line x1="170" y1="100" x2="270" y2="100" class="active"></line>
-                                                            </svg>
-                                                            <div class="arch-node node-server">
-                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-                                                                <span>Cloud Server</span>
-                                                            </div>
-                                                            <div class="arch-node node-gateway">
-                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
-                                                                <span>Gateway</span>
-                                                            </div>
-                                                            <div class="arch-node node-hmi">
-                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                                                                <span>HMI Panel</span>
-                                                            </div>
-                                                            <div class="arch-node node-plc">
-                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
-                                                                <span>Core PLC</span>
-                                                            </div>
-                                                        </div>
+                                                        <p class="reco-reason" style="margin: 0; color: var(--text-secondary);">
+                                                            No architecture graph could be extracted from this section yet. Add explicit component relationships such as "A sends data to B" or "A communicates with B using OPC UA" and generate again.
+                                                        </p>
                                                     </div>
                                                 {% elif suggestion.visual_type == "Decision Tree" and not suggestion.generated_artifact %}
                                                     <div class="simulator-box">
@@ -801,9 +846,10 @@
                         </ul>
                     </div>
                     <div class="help-subsection">
-                        <h4>Suggested Content</h4>
+                        <h4>Capture Specifications</h4>
                         <ul class="help-list">
-                            <li>Some recommendations include <strong>"Suggested Visual Content"</strong></li>
+                            <li>Screenshot recommendations include a <strong>"Capture Specification"</strong> checklist</li>
+                            <li>Use Purpose, Include, Primary Focus, and Exclude fields to align screenshots across pages</li>
                             <li>Copy insertion snippets to add placeholders to your document</li>
                             <li>AI can generate Mermaid diagram code automatically</li>
                         </ul>

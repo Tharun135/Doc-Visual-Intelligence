@@ -1046,6 +1046,18 @@ textarea.editor:focus {
     height: auto;
 }
 
+.artifact-svg-preview {
+    overflow-x: auto;
+}
+
+.artifact-svg-preview svg {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+}
+
 .artifact-mermaid-preview.workflow-animated svg .edgePath .path,
 .artifact-mermaid-preview.workflow-animated svg .flowchart-link {
     stroke-dasharray: 8 7;

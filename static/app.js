@@ -452,7 +452,9 @@ function initGenerateArtifactButtons() {
             }
 
             artifactContainer.classList.remove('artifact-hidden');
-            renderMermaidInContainer(artifactContainer);
+            if (artifactContainer.querySelector('.artifact-mermaid-preview')) {
+                renderMermaidInContainer(artifactContainer);
+            }
 
             button.classList.add('inserted');
             button.textContent = '✓ Generated';

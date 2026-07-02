@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 920" role="img" aria-label="Gateway Topology architecture diagram">
+  <defs>
+    <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <polygon points="0 0, 12 4, 0 8" fill="#00646E"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="920" fill="#000028" rx="22" ry="22"/>
+  <g>
+    <text x="640" y="56" text-anchor="middle" fill="#FFFFFF" font-size="29" font-weight="700" font-family="Segoe UI, Roboto, sans-serif">Gateway Topology</text>
+    <text x="640" y="96" text-anchor="middle" fill="#A6F7E5" font-size="14" font-family="Segoe UI, Roboto, sans-serif">Pattern: Gateway Hub (confidence: 90%)</text>
+    <line x1="360" y1="78" x2="920" y2="78" stroke="#9C27B0" stroke-width="2.4" opacity="0.85"/>
+  </g>
+  <line x1="514.7128129211021" y1="677.0037735580382" x2="612.287187078898" y2="508.0" stroke="#00646E" stroke-width="3" opacity="0.95" stroke-dasharray="6 6" marker-end="url(#arrowhead)"/>
+  <rect x="520.5" y="578.5018867790191" width="86" height="28" rx="6" fill="#000028" stroke="#00646E" stroke-width="1.4" opacity="0.97"/>
+  <text x="563.5" y="597.5018867790191" text-anchor="middle" fill="#FFFFFF" font-size="14" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">MQTT</text>
+  <line x1="514.712812921102" y1="242.99622644196182" x2="612.2871870788979" y2="412.0" stroke="#00646E" stroke-width="3" opacity="0.95" stroke-dasharray="6 6" marker-end="url(#arrowhead)"/>
+  <rect x="520.5" y="313.49811322098094" width="86" height="28" rx="6" fill="#000028" stroke="#00646E" stroke-width="1.4" opacity="0.97"/>
+  <text x="563.5" y="332.49811322098094" text-anchor="middle" fill="#FFFFFF" font-size="14" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">MQTT</text>
+  <line x1="750.0" y1="460.0" x2="836.0" y2="460.0" stroke="#00646E" stroke-width="3" opacity="0.95" marker-end="url(#arrowhead)"/>
+  <rect x="750.0" y="446.0" width="86" height="28" rx="6" fill="#000028" stroke="#00646E" stroke-width="1.4" opacity="0.97"/>
+  <text x="793.0" y="465.0" text-anchor="middle" fill="#FFFFFF" font-size="14" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">MQTT</text>
+  <rect x="836.0" y="412.0" width="220" height="96" rx="10" ry="10" fill="#9C27B0" stroke="#7B1FA2" stroke-width="2.8"/>
+  <text x="946.0" y="466.0" text-anchor="middle" fill="#FFFFFF" font-size="16" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">Cloud Service</text>
+  <rect x="530.0" y="412.0" width="220" height="96" rx="10" ry="10" fill="#0288D1" stroke="#0277BD" stroke-width="2.8"/>
+  <text x="640" y="466" text-anchor="middle" fill="#FFFFFF" font-size="16" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">MQTT Gateway</text>
+  <rect x="377.00000000000006" y="677.0037735580382" width="220" height="96" rx="10" ry="10" fill="#009999" stroke="#00646E" stroke-width="2.8"/>
+  <text x="487.00000000000006" y="731.0037735580382" text-anchor="middle" fill="#FFFFFF" font-size="16" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">Sensor A</text>
+  <rect x="376.9999999999999" y="146.99622644196182" width="220" height="96" rx="10" ry="10" fill="#009999" stroke="#00646E" stroke-width="2.8"/>
+  <text x="486.9999999999999" y="200.99622644196182" text-anchor="middle" fill="#FFFFFF" font-size="16" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">Sensor B</text>
+  <rect x="970" y="802" width="280" height="92" rx="10" fill="#0A1938" stroke="#355C7D" stroke-width="1.6" opacity="0.95"/>
+  <text x="986" y="822" fill="#FFFFFF" font-size="13" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">Legend</text>
+  <rect x="984" y="832" width="14" height="14" rx="3" fill="#9C27B0" stroke="#7B1FA2" stroke-width="1"/>
+  <text x="1006" y="843" fill="#FFFFFF" font-size="12" font-family="Segoe UI, Roboto, sans-serif">Cloud Service</text>
+  <rect x="984" y="852" width="14" height="14" rx="3" fill="#0288D1" stroke="#0277BD" stroke-width="1"/>
+  <text x="1006" y="863" fill="#FFFFFF" font-size="12" font-family="Segoe UI, Roboto, sans-serif">Gateway</text>
+  <rect x="984" y="872" width="14" height="14" rx="3" fill="#009999" stroke="#00646E" stroke-width="1"/>
+  <text x="1006" y="883" fill="#FFFFFF" font-size="12" font-family="Segoe UI, Roboto, sans-serif">Application</text>
+  <rect x="1108" y="832" width="14" height="14" rx="3" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+  <text x="1130" y="843" fill="#FFFFFF" font-size="12" font-family="Segoe UI, Roboto, sans-serif">Device</text>
+  <rect x="1108" y="852" width="14" height="14" rx="3" fill="#616161" stroke="#424242" stroke-width="1"/>
+  <text x="1130" y="863" fill="#FFFFFF" font-size="12" font-family="Segoe UI, Roboto, sans-serif">Database</text>
+</svg>

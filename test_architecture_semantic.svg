@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 920" role="img" aria-label="IIH Connectivity architecture diagram">
+  <defs>
+    <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <polygon points="0 0, 12 4, 0 8" fill="#00646E"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="920" fill="#000028" rx="22" ry="22"/>
+  <g>
+    <text x="640" y="56" text-anchor="middle" fill="#FFFFFF" font-size="29" font-weight="700" font-family="Segoe UI, Roboto, sans-serif">IIH Connectivity</text>
+    <line x1="360" y1="78" x2="920" y2="78" stroke="#9C27B0" stroke-width="2.4" opacity="0.85"/>
+  </g>
+  <rect x="-130.0" y="158.33333333333331" width="420" height="180" rx="16" ry="16" fill="#0A2140" stroke="#4FC3F7" stroke-width="2.2" opacity="0.92"/>
+  <line x1="-130.0" y1="200.33333333333331" x2="290.0" y2="200.33333333333331" stroke="#4FC3F7" stroke-width="1.6" opacity="0.8"/>
+  <text x="80.0" y="186.33333333333331" text-anchor="middle" fill="#D7F6FF" font-size="15" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">IIH Device</text>
+  <line x1="216.0" y1="257.1190476190476" x2="1040.0" y2="249.76190476190473" stroke="#00646E" stroke-width="3" opacity="0.95" stroke-dasharray="6 6" marker-end="url(#arrowhead)"/>
+  <rect x="585.0" y="239.44047619047615" width="86" height="28" rx="6" fill="#000028" stroke="#00646E" stroke-width="1.4" opacity="0.97"/>
+  <text x="628.0" y="258.44047619047615" text-anchor="middle" fill="#FFFFFF" font-size="14" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">OPC UA</text>
+  <line x1="1075.9384615384615" y1="296.3333333333333" x2="764.0615384615385" y2="417.0" stroke="#00646E" stroke-width="3" opacity="0.95" marker-end="url(#arrowhead)"/>
+  <rect x="877.0" y="342.66666666666663" width="86" height="28" rx="6" fill="#000028" stroke="#00646E" stroke-width="1.4" opacity="0.97"/>
+  <text x="920.0" y="361.66666666666663" text-anchor="middle" fill="#FFFFFF" font-size="14" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">sends</text>
+  <line x1="640.0" y1="513.0" x2="640.0" y2="633.6666666666666" stroke="#00646E" stroke-width="3" opacity="0.95" marker-end="url(#arrowhead)"/>
+  <rect x="591.0" y="559.3333333333333" width="98" height="28" rx="6" fill="#000028" stroke="#00646E" stroke-width="1.4" opacity="0.97"/>
+  <text x="640.0" y="578.3333333333333" text-anchor="middle" fill="#FFFFFF" font-size="14" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">forwards</text>
+  <rect x="480.0" y="633.6666666666666" width="320" height="96" rx="10" ry="10" fill="#9C27B0" stroke="#7B1FA2" stroke-width="2.8"/>
+  <text x="640.0" y="687.6666666666666" text-anchor="middle" fill="#FFFFFF" font-size="16" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">Cloud Server</text>
+  <rect x="480.0" y="417.0" width="320" height="96" rx="10" ry="10" fill="#0288D1" stroke="#0277BD" stroke-width="2.8"/>
+  <text x="640.0" y="471.0" text-anchor="middle" fill="#FFFFFF" font-size="16" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">Gateway</text>
+  <rect x="1040.0" y="200.33333333333331" width="320" height="96" rx="10" ry="10" fill="#9C27B0" stroke="#7B1FA2" stroke-width="2.8"/>
+  <text x="1200.0" y="254.33333333333331" text-anchor="middle" fill="#FFFFFF" font-size="16" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">IIH Semantics</text>
+  <rect x="-56.0" y="216.33333333333331" width="272" height="84" rx="10" ry="10" fill="#009999" stroke="#00646E" stroke-width="2.8"/>
+  <text x="80.0" y="264.3333333333333" text-anchor="middle" fill="#FFFFFF" font-size="16" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">Unified on Edge</text>
+  <rect x="970" y="802" width="280" height="92" rx="10" fill="#0A1938" stroke="#355C7D" stroke-width="1.6" opacity="0.95"/>
+  <text x="986" y="822" fill="#FFFFFF" font-size="13" font-family="Segoe UI, Roboto, sans-serif" font-weight="700">Legend</text>
+  <rect x="984" y="832" width="14" height="14" rx="3" fill="#9C27B0" stroke="#7B1FA2" stroke-width="1"/>
+  <text x="1006" y="843" fill="#FFFFFF" font-size="12" font-family="Segoe UI, Roboto, sans-serif">Cloud Service</text>
+  <rect x="984" y="852" width="14" height="14" rx="3" fill="#0288D1" stroke="#0277BD" stroke-width="1"/>
+  <text x="1006" y="863" fill="#FFFFFF" font-size="12" font-family="Segoe UI, Roboto, sans-serif">Gateway</text>
+  <rect x="984" y="872" width="14" height="14" rx="3" fill="#009999" stroke="#00646E" stroke-width="1"/>
+  <text x="1006" y="883" fill="#FFFFFF" font-size="12" font-family="Segoe UI, Roboto, sans-serif">Application</text>
+  <rect x="1108" y="832" width="14" height="14" rx="3" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+  <text x="1130" y="843" fill="#FFFFFF" font-size="12" font-family="Segoe UI, Roboto, sans-serif">Device</text>
+  <rect x="1108" y="852" width="14" height="14" rx="3" fill="#616161" stroke="#424242" stroke-width="1"/>
+  <text x="1130" y="863" fill="#FFFFFF" font-size="12" font-family="Segoe UI, Roboto, sans-serif">Database</text>
+</svg>
