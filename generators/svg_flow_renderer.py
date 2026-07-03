@@ -8,7 +8,7 @@ import re
 import textwrap
 
 _CANVAS_WIDTH = 980
-_MIN_CARD_WIDTH = 620
+_MIN_CARD_WIDTH = 300
 _CARD_HEIGHT = 120
 _TOP_MARGIN = 140
 _BOTTOM_MARGIN = 48
@@ -163,34 +163,34 @@ def generate_simple_flow_svg(title: str, steps: list[str], signals: dict | None 
     step_count = len(clean_steps)
     is_short = step_count <= 6
     is_very_short = step_count <= 4
-    title_size_override = int(theme.get("titleSize", 29)) + (6 if is_very_short else 4 if is_short else 0)
-    card_text_size_override = int(theme.get("cardTextSize", 17)) + (5 if is_very_short else 3 if is_short else 0)
-    card_label_size_override = int(theme.get("cardLabelSize", 14)) + (3 if is_very_short else 2 if is_short else 0)
-    number_size_override = int(theme.get("numberSize", 18)) + (2 if is_short else 0)
+    title_size_override = int(theme.get("titleSize", 36)) + (8 if is_very_short else 6 if is_short else 0)
+    card_text_size_override = int(theme.get("cardTextSize", 22)) + (6 if is_very_short else 4 if is_short else 0)
+    card_label_size_override = int(theme.get("cardLabelSize", 16)) + (3 if is_very_short else 2 if is_short else 0)
+    number_size_override = int(theme.get("numberSize", 22)) + (3 if is_short else 0)
 
     wrapped_steps = []
     max_line_chars = 0
     for step in clean_steps:
         kind, icon, label = _step_kind(step)
-        text_with_icon = f"{icon} {step}"
-        lines = textwrap.wrap(text_with_icon, width=60)[:2]
-        if len(textwrap.wrap(text_with_icon, width=60)) > 2:
-             lines[1] = lines[1] + "..."
+        lines = textwrap.wrap(step, width=38)[:3]
+        if len(textwrap.wrap(step, width=38)) > 3:
+             lines[2] = lines[2] + "..."
         wrapped_steps.append((kind, icon, label, lines))
         for line in lines:
             if len(line) > max_line_chars:
                 max_line_chars = len(line)
 
-    card_width = min(880, max(_MIN_CARD_WIDTH, 140 + max_line_chars * 12))
-    canvas_width = max(_CANVAS_WIDTH, card_width + 220)
+    _DYNAMIC_CARD_HEIGHT = 150
+    card_width = max(_MIN_CARD_WIDTH, 140 + max_line_chars * 15)
+    canvas_width = card_width + 60
 
     card_x = (canvas_width - card_width) // 2
-    number_x = card_x + 20
-    text_x = card_x + 64
+    number_x = card_x + 32
+    text_center_x = card_x + 68 + (card_width - 68) // 2
 
     total_steps = len(clean_steps)
-    step_gap = int(theme.get("stepGap", 106))
-    canvas_height = _TOP_MARGIN + total_steps * _CARD_HEIGHT + (total_steps - 1) * step_gap + _BOTTOM_MARGIN
+    step_gap = int(theme.get("stepGap", 80))
+    canvas_height = _TOP_MARGIN + total_steps * _DYNAMIC_CARD_HEIGHT + (total_steps - 1) * step_gap + _BOTTOM_MARGIN
 
     card_radius = int(theme.get("cardRadius", 16))
     title_size = title_size_override
@@ -219,44 +219,43 @@ def generate_simple_flow_svg(title: str, steps: list[str], signals: dict | None 
     for index, item in enumerate(wrapped_steps, start=1):
         kind, icon, label, lines = item
         fill, stroke, text_color = _card_style(kind, theme)
-        y = _TOP_MARGIN + (index - 1) * (_CARD_HEIGHT + step_gap)
-        cy = y + _CARD_HEIGHT // 2
+        y = _TOP_MARGIN + (index - 1) * (_DYNAMIC_CARD_HEIGHT + step_gap)
+        cy = y + _DYNAMIC_CARD_HEIGHT // 2
 
         # Connector to next node
         if index < total_steps:
-            next_y = _TOP_MARGIN + index * (_CARD_HEIGHT + step_gap)
-            line_start = y + _CARD_HEIGHT + 12
+            next_y = _TOP_MARGIN + index * (_DYNAMIC_CARD_HEIGHT + step_gap)
+            line_start = y + _DYNAMIC_CARD_HEIGHT + 12
             line_end = next_y - 12
             parts.append(
                 f'  <line x1="{canvas_width // 2}" y1="{line_start}" x2="{canvas_width // 2}" y2="{line_end}" stroke="{connector}" stroke-width="3.2" stroke-dasharray="6 8" opacity="0.96" marker-end="url(#stepArrow)"/>'
             )
 
-        # Embedded step number (inside box left edge)
+        # Card background
+        parts.append(
+            f'  <rect x="{card_x}" y="{y}" width="{card_width}" height="{_DYNAMIC_CARD_HEIGHT}" rx="{card_radius}" ry="{card_radius}" fill="{fill}" stroke="{stroke}" stroke-width="2.8"/>'
+        )
+
+        # Embedded step number (inside box left edge) - drawn ON TOP of rect
         parts.append(
             f'  <circle cx="{number_x}" cy="{cy}" r="18" fill="{theme["numberFill"]}" stroke="{theme["numberBorder"]}" stroke-width="2.4"/>'
         )
         parts.append(
             f'  <text x="{number_x}" y="{cy + 6}" text-anchor="middle" fill="{theme["numberText"]}" font-size="{number_size}" font-family="{font_family}" font-weight="700">{index}</text>'
         )
-
-        # Card and text
         parts.append(
-            f'  <rect x="{card_x}" y="{y}" width="{card_width}" height="{_CARD_HEIGHT}" rx="{card_radius}" ry="{card_radius}" fill="{fill}" stroke="{stroke}" stroke-width="2.8"/>'
+            f'  <text x="{text_center_x}" y="{y + 40}" text-anchor="middle" fill="{text_color}" font-size="{card_label_size}" font-family="{font_family}" opacity="0.92" letter-spacing="0.6">{escape(label)}</text>'
         )
-        parts.append(
-            f'  <text x="{text_x}" y="{y + 40}" fill="{text_color}" font-size="{card_label_size}" font-family="{font_family}" opacity="0.92" letter-spacing="0.6">{escape(label)}</text>'
-        )
+        
         if len(lines) == 1:
-            parts.append(
-                f'  <text x="{text_x}" y="{y + 82}" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>'
-            )
+            parts.append(f'  <text x="{text_center_x}" y="{y + 94}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>')
+        elif len(lines) == 2:
+            parts.append(f'  <text x="{text_center_x}" y="{y + 80}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>')
+            parts.append(f'  <text x="{text_center_x}" y="{y + 108}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[1])}</text>')
         else:
-            parts.append(
-                f'  <text x="{text_x}" y="{y + 70}" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>'
-            )
-            parts.append(
-                f'  <text x="{text_x}" y="{y + 98}" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[1])}</text>'
-            )
+            parts.append(f'  <text x="{text_center_x}" y="{y + 70}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>')
+            parts.append(f'  <text x="{text_center_x}" y="{y + 98}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[1])}</text>')
+            parts.append(f'  <text x="{text_center_x}" y="{y + 126}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[2])}</text>')
 
     parts.append("</svg>")
     return "\n".join(parts)

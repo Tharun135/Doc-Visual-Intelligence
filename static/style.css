@@ -596,7 +596,7 @@ textarea.editor:focus {
 /* Two Column Dashboard for Results */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 42% 56%;
+    grid-template-columns: 30% 68%;
     gap: 2%;
     align-items: start;
 }
@@ -625,6 +625,7 @@ textarea.editor:focus {
     max-height: calc(100vh - 320px);
     overflow-y: auto;
     padding-right: 0.5rem;
+    min-width: 0;
 }
 
 .section-item-card {
@@ -1038,24 +1039,40 @@ textarea.editor:focus {
 }
 
 .artifact-mermaid-preview {
-    overflow-x: auto;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    padding: 0.5rem;
+    display: block;
+    text-align: center;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .artifact-mermaid-preview svg {
-    max-width: 100%;
-    height: auto;
+    display: block;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0 auto;
 }
 
 .artifact-svg-preview {
-    overflow-x: auto;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    padding: 0.5rem;
+    display: block;
+    text-align: center;
+    width: 100%;
 }
 
 .artifact-svg-preview svg {
     display: block;
-    width: 100%;
-    max-width: 100%;
-    height: auto;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
     border-radius: 12px;
+    margin: 0 auto;
 }
 
 .artifact-mermaid-preview.workflow-animated svg .edgePath .path,
