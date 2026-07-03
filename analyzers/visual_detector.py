@@ -644,6 +644,15 @@ def _build_generated_artifact(
     return None
 
 
+def _extract_orphan_components(visual_type: str, content: str, generated_artifact: dict | None) -> list[str]:
+    if visual_type in {"Architecture Diagram", "Topology Diagram", "Data Flow Diagram"} and not generated_artifact:
+        from generators.architecture_parser import _extract_component_mentions, _load_knowledge_model
+        knowledge = _load_knowledge_model()
+        orphans = _extract_component_mentions(content, knowledge)
+        return sorted(list({o['name'] for o in orphans}))
+    return []
+
+
 def _generate_alt_text(spec: dict | None, placement_hint: dict | None) -> str:
     """Draft descriptive alt text from the screenshot specification."""
     if spec:
@@ -798,6 +807,37 @@ def _gap_analysis(visual_type: str, existing: dict) -> dict:
         "gap_message": gap_message,
         "coverage_display": f"Coverage: {existing_count}/1 ({coverage}%)",
     }
+
+
+def _extract_audit_checklist(content: str, signals: dict) -> list[str]:
+    checklist = []
+    
+    # 1. Steps with UI terms
+    steps = signals.get("step_lines", [])
+    for step in steps:
+        if any(re.search(r"\b" + re.escape(t) + r"\b", step, re.IGNORECASE) for t in _UI_TERMS):
+            short_step = step[:60] + ("..." if len(step) > 60 else "")
+            checklist.append(f"Verify step: {short_step}")
+            
+    # 2. If no steps, look for sentences with UI terms and Action verbs
+    if not checklist:
+        sentences = re.split(r"(?<=[.!?])\s+|\n", content)
+        for s in sentences:
+            s_lower = s.lower()
+            if any(re.search(r"\b" + re.escape(t) + r"\b", s_lower) for t in _UI_TERMS) and \
+               any(re.search(r"\b" + re.escape(v) + r"\b", s_lower) for v in _ACTION_VERBS):
+                short_s = s.strip()[:60] + ("..." if len(s.strip()) > 60 else "")
+                checklist.append(f"Verify action: {short_s}")
+                
+    # Deduplicate and limit
+    seen = set()
+    final_list = []
+    for item in checklist:
+        if item not in seen:
+            seen.add(item)
+            final_list.append(item)
+            
+    return final_list[:4]
 
 
 # ─────────────────────────────────────────────
@@ -963,6 +1003,7 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             "required_count": 1,
             "placement_hint": placement_hint,
             "generated_artifact": generated_artifact,
+            "orphan_components": _extract_orphan_components(result.visual_type, content, generated_artifact),
             "insertion_snippet": insertion_snippet,
             "suggested_content": _suggest_content(result.visual_type, title, signals, placement_hint),
         })
@@ -1000,6 +1041,7 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             "required_count": 1,
             "placement_hint": placement_hint,
             "generated_artifact": generated_artifact,
+            "orphan_components": _extract_orphan_components(hit["visual_type"], content, generated_artifact),
             "insertion_snippet": insertion_snippet,
             "suggested_content": _suggest_content(hit["visual_type"], title, signals, placement_hint),
         })
@@ -1044,10 +1086,43 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             "required_count": len(a11y_issues),
             "placement_hint": None,
             "generated_artifact": None,
+            "orphan_components": [],
             "insertion_snippet": "<!-- Correct format: ![Descriptive Text](url) -->",
             "suggested_content": "Add descriptive Alt-Text to the identified images so screen readers can interpret them.",
         }
         deduped.insert(0, a11y_card)
+
+    # ── Asset Audit / Maintenance Check ────────────────────────
+    if existing_assets["screenshot"] > 0:
+        checklist = _extract_audit_checklist(content, signals)
+        if checklist:
+            audit_card = {
+                "visual_type": "Asset Audit",
+                "reader_question": "Does this screenshot still match the current UI?",
+                "reason": "This section contains an existing screenshot. Verify the image still matches the documented UI elements below.",
+                "confidence": 90,
+                "confidence_category": "High",
+                "priority": "High",
+                "reader_value": 5,
+                "content_type": content_type,
+                "content_type_confidence": content_type_confidence,
+                "complexity_score": signals["complexity_score"],
+                "worthiness_score": 10,
+                "evidence": checklist,
+                "rationale": "Screenshots decay over time as UI changes. Routine audits prevent user confusion.",
+                "source": "maintenance_auditor",
+                "existing_visuals": existing_assets,
+                "gap_message": "Visual Rot Risk",
+                "gap_coverage": "Audit Required",
+                "existing_count": existing_assets["screenshot"],
+                "required_count": 0,
+                "placement_hint": None,
+                "generated_artifact": None,
+                "insertion_snippet": None,
+                "suggested_content": "Review the existing screenshot against the UI elements mentioned in the text to ensure it is up to date.",
+                "audit_checklist": checklist,
+            }
+            deduped.insert(0, audit_card)
 
     # ── No results fallback ────────────────────
     if not deduped:
@@ -1074,6 +1149,7 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             "required_count": 0,
             "placement_hint": None,
             "generated_artifact": None,
+            "orphan_components": [],
             "insertion_snippet": None,
             "suggested_content": "Keep text-only unless complexity increases.",
         }]

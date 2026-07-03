@@ -5,6 +5,7 @@ from html import escape
 import json
 from pathlib import Path
 import re
+import textwrap
 
 _CANVAS_WIDTH = 980
 _MIN_CARD_WIDTH = 620
@@ -83,7 +84,7 @@ def _sanitize_step(step: str) -> str:
     return s.strip()
 
 
-def _shorten(text: str, max_words: int = 11) -> str:
+def _shorten(text: str, max_words: int = 15) -> str:
     words = text.split()
     if len(words) <= max_words:
         return text
@@ -167,8 +168,20 @@ def generate_simple_flow_svg(title: str, steps: list[str], signals: dict | None 
     card_label_size_override = int(theme.get("cardLabelSize", 14)) + (3 if is_very_short else 2 if is_short else 0)
     number_size_override = int(theme.get("numberSize", 18)) + (2 if is_short else 0)
 
-    max_chars = max((len(s) for s in clean_steps), default=24)
-    card_width = min(780, max(_MIN_CARD_WIDTH, 340 + max_chars * 8))
+    wrapped_steps = []
+    max_line_chars = 0
+    for step in clean_steps:
+        kind, icon, label = _step_kind(step)
+        text_with_icon = f"{icon} {step}"
+        lines = textwrap.wrap(text_with_icon, width=60)[:2]
+        if len(textwrap.wrap(text_with_icon, width=60)) > 2:
+             lines[1] = lines[1] + "..."
+        wrapped_steps.append((kind, icon, label, lines))
+        for line in lines:
+            if len(line) > max_line_chars:
+                max_line_chars = len(line)
+
+    card_width = min(880, max(_MIN_CARD_WIDTH, 140 + max_line_chars * 12))
     canvas_width = max(_CANVAS_WIDTH, card_width + 220)
 
     card_x = (canvas_width - card_width) // 2
@@ -178,8 +191,6 @@ def generate_simple_flow_svg(title: str, steps: list[str], signals: dict | None 
     total_steps = len(clean_steps)
     step_gap = int(theme.get("stepGap", 106))
     canvas_height = _TOP_MARGIN + total_steps * _CARD_HEIGHT + (total_steps - 1) * step_gap + _BOTTOM_MARGIN
-
-    kinds = [_step_kind(step)[0] for step in clean_steps]
 
     card_radius = int(theme.get("cardRadius", 16))
     title_size = title_size_override
@@ -205,8 +216,8 @@ def generate_simple_flow_svg(title: str, steps: list[str], signals: dict | None 
     parts.append(f'    <text x="{canvas_width // 2}" y="102" text-anchor="middle" fill="{theme["subtitle"]}" font-size="{subtitle_size}" font-family="{font_family}" letter-spacing="1">{total_steps} STEPS</text>')
     parts.append("  </g>")
 
-    for index, step in enumerate(clean_steps, start=1):
-        kind, icon, label = _step_kind(step)
+    for index, item in enumerate(wrapped_steps, start=1):
+        kind, icon, label, lines = item
         fill, stroke, text_color = _card_style(kind, theme)
         y = _TOP_MARGIN + (index - 1) * (_CARD_HEIGHT + step_gap)
         cy = y + _CARD_HEIGHT // 2
@@ -235,9 +246,17 @@ def generate_simple_flow_svg(title: str, steps: list[str], signals: dict | None 
         parts.append(
             f'  <text x="{text_x}" y="{y + 40}" fill="{text_color}" font-size="{card_label_size}" font-family="{font_family}" opacity="0.92" letter-spacing="0.6">{escape(label)}</text>'
         )
-        parts.append(
-            f'  <text x="{text_x}" y="{y + 82}" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(icon + " " + step)}</text>'
-        )
+        if len(lines) == 1:
+            parts.append(
+                f'  <text x="{text_x}" y="{y + 82}" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>'
+            )
+        else:
+            parts.append(
+                f'  <text x="{text_x}" y="{y + 70}" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>'
+            )
+            parts.append(
+                f'  <text x="{text_x}" y="{y + 98}" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[1])}</text>'
+            )
 
     parts.append("</svg>")
     return "\n".join(parts)
