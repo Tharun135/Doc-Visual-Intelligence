@@ -256,6 +256,17 @@
                                                     <p class="reco-reason">{{ suggestion.reason }}</p>
                                                 </div>
 
+                                                    {% if suggestion.reuse_warning %}
+                                                    <div style="display:flex; align-items:flex-start; gap:0.5rem; background:rgba(255,180,0,0.08); border:1px solid rgba(255,180,0,0.35); border-radius:6px; padding:0.5rem 0.75rem; margin-top:0.4rem; margin-bottom:0.3rem; font-size:0.85rem; color:var(--text-secondary);">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="width:15px;height:15px;flex-shrink:0;margin-top:1px;">
+                                                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                                                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                                        </svg>
+                                                        <span><strong>Possible reuse:</strong> {{ suggestion.reuse_warning }}</span>
+                                                    </div>
+                                                    {% endif %}
+
                                                 {% if suggestion.placement_hint %}
                                                     <div class="reco-placement-highlight" style="margin-top: 0.35rem; margin-bottom: 0.55rem;">
                                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; flex-shrink: 0;">
@@ -731,7 +742,7 @@
                     <h3>🚀 Quick Start (3 Steps)</h3>
                     <ol class="help-steps">
                         <li><strong>Upload or paste your document</strong> - Supports PDF, DOCX, TXT, MD, JSON (max 25MB)</li>
-                        <li><strong>Click "Analyze Visual Opportunities"</strong> - AI scans your entire document</li>
+                        <li><strong>Click "Analyze Visual Opportunities"</strong> - The tool scans your entire document using configurable detection rules</li>
                         <li><strong>Review recommendations</strong> - See what visuals to add and where</li>
                     </ol>
                 </div>
@@ -783,7 +794,7 @@
                             <li><strong>Visual Type</strong> - What to create (Screenshot, Flowchart, etc.)</li>
                             <li><strong>Reader Benefit</strong> - Why this visual helps readers</li>
                             <li><strong>Reader Value (1-5)</strong> - How much effort it saves readers</li>
-                            <li><strong>Confidence %</strong> - How certain the AI is about this recommendation</li>
+                            <li><strong>Confidence %</strong> - How strongly the detection rules matched this section</li>
                             <li><strong>Priority</strong> - High, Medium, Low importance</li>
                             <li><strong>Recommended Placement</strong> - Where in the text to add it</li>
                         </ul>
@@ -834,14 +845,14 @@
                         <h4>Feedback</h4>
                         <ul class="help-list">
                             <li>Rate recommendations: <strong>"Was this useful?"</strong> with 👍 Yes or 👎 No</li>
-                            <li>Your feedback helps improve AI accuracy for future analyses</li>
+                            <li>Your feedback helps improve rule accuracy for future analyses</li>
                         </ul>
                     </div>
                     <div class="help-subsection">
                         <h4>Advanced Details</h4>
                         <ul class="help-list">
                             <li>Click <strong>"Advanced Details"</strong> to see signal analysis</li>
-                            <li>View why the AI made this recommendation</li>
+                            <li>View which rules triggered this recommendation and why</li>
                             <li>See confidence scores and detected content type</li>
                         </ul>
                     </div>
@@ -851,7 +862,7 @@
                             <li>Screenshot recommendations include a <strong>"Capture Specification"</strong> checklist</li>
                             <li>Use Purpose, Include, Primary Focus, and Exclude fields to align screenshots across pages</li>
                             <li>Copy insertion snippets to add placeholders to your document</li>
-                            <li>AI can generate Mermaid diagram code automatically</li>
+                            <li>The tool can generate Mermaid diagram code automatically from detected content</li>
                         </ul>
                     </div>
                 </div>
@@ -878,19 +889,19 @@
                     </div>
                     <div class="help-faq-item">
                         <h4>How does it detect sections?</h4>
-                        <p>AI identifies headings (numbered like "1.2.3" or markdown "#"), and keywords like "Procedure", "Overview", "Introduction"</p>
+                        <p>The tool identifies headings (numbered like "1.2.3" or markdown "#"), and structural keywords like "Procedure", "Overview", "Introduction"</p>
                     </div>
                     <div class="help-faq-item">
                         <h4>Can I edit recommendations?</h4>
-                        <p>Recommendations are AI-generated suggestions. You control what actually gets added to your document</p>
+                        <p>Recommendations are rule-based suggestions. You control what actually gets added to your document</p>
                     </div>
                     <div class="help-faq-item">
                         <h4>Why "No recommendation"?</h4>
-                        <p>Some sections may be best as pure text (e.g., summaries, disclaimers). The AI respects this</p>
+                        <p>Some sections may be best as pure text (for example, summaries or disclaimers). The tool respects this and returns no recommendation</p>
                     </div>
                     <div class="help-faq-item">
                         <h4>What does confidence % mean?</h4>
-                        <p>Higher % = AI is more certain this visual would help. 80%+ is highly confident</p>
+                        <p>Higher % = more detection rules matched this section. 80%+ is a strong match</p>
                     </div>
                     <div class="help-faq-item">
                         <h4>Can I regenerate the analysis?</h4>
@@ -901,7 +912,7 @@
                 <!-- Getting Help -->
                 <div class="help-section help-section-last">
                     <h3>📞 Need More Help?</h3>
-                    <p>This tool uses AI to improve document readability. Results are suggestions—always review before making changes to your documents.</p>
+                    <p>This tool uses rule-based detection to identify opportunities for visual aids. Results are suggestions—always review before making changes to your documents.</p>
                     <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">Created to help technical writers enhance documentation with strategic visual aids.</p>
                 </div>
             </div>

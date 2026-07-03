@@ -190,6 +190,36 @@ def home():
                     "suggestions": suggestions
                 })
 
+            # ── Reuse detection ─────────────────────────────────────
+            # Build a fingerprint for each screenshot recommendation from
+            # its focus area + include list, then flag later sections that
+            # share the same fingerprint with the first-seen section title.
+            _screenshot_types = {"Screenshot", "Configuration Screenshot", "Annotated Screenshot"}
+            _seen_fingerprints: dict[str, str] = {}   # fingerprint → section title
+
+            for result in results:
+                for suggestion in result["suggestions"]:
+                    if suggestion.get("visual_type") not in _screenshot_types:
+                        continue
+                    spec = (
+                        suggestion.get("generated_artifact") or {}
+                    ).get("specification") or {}
+                    focus = spec.get("focus_area", "").strip().lower()
+                    include = " | ".join(
+                        sorted(i.lower() for i in spec.get("capture", {}).get("include", []))
+                    )
+                    fingerprint = f"{focus}::{include}"
+                    if len(fingerprint) < 4:
+                        continue
+                    if fingerprint in _seen_fingerprints:
+                        suggestion["reuse_warning"] = (
+                            f'This screenshot may already exist in section: "{_seen_fingerprints[fingerprint]}"'
+                        )
+                    else:
+                        _seen_fingerprints[fingerprint] = result["title"]
+                        suggestion["reuse_warning"] = None
+            # ── End reuse detection ──────────────────────────────────
+
         post_state_id = uuid.uuid4().hex
         POST_STATE_CACHE[post_state_id] = {
             "results": results,

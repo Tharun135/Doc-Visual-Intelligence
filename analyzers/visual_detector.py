@@ -44,55 +44,45 @@ def _load_json(path: Path, label: str) -> list | dict:
 JSON_RULES: list = _load_json(_RULES_PATH, "visual_rules")
 KNOWLEDGE_MODEL: dict = _load_json(_KNOWLEDGE_PATH, "knowledge_model")
 
-
-# ─────────────────────────────────────────────
-# Signal vocabulary
-# ─────────────────────────────────────────────
-
 _ACTION_VERBS = {
-    "open", "click", "select", "choose", "validate", "start", "verify",
-    "check", "configure", "deploy", "save", "run", "import", "export",
-    "upload", "download", "add", "remove", "connect", "set", "enter",
-    "create", "transform", "return", "complete", "navigate", "browse",
+    "click", "select", "open", "enter", "type", "choose", "navigate",
+    "save", "apply", "check", "uncheck", "toggle", "expand", "collapse",
+    "drag", "drop", "upload", "download", "import", "export", "verify",
+    "confirm", "refresh", "review", "configure", "set", "enable", "disable",
+    "generate", "create", "start", "stop", "retry", "continue", "proceed",
+    "install", "deploy", "launch"
 }
 
 _UI_TERMS = {
-    "click", "select", "choose", "open", "navigate", "upload", "download",
-    "set", "configure", "connect", "import", "export", "save", "apply",
-    "enter", "type", "scroll", "drag", "drop", "toggle", "enable", "disable",
-    "check", "uncheck", "expand", "collapse",
+    "button", "tab", "menu", "dialog", "window", "panel", "screen",
+    "field", "input", "checkbox", "toggle", "switch", "dropdown",
+    "list", "table", "grid", "row", "column", "toolbar", "sidebar",
+    "banner", "page", "section", "form"
 }
 
 _CHECKPOINT_TERMS = {
-    "validate", "verify", "confirm", "review", "save", "apply", "test", "status",
-}
-
-_NETWORK_NOUNS = {
-    "plc", "hmi", "server", "gateway", "connector", "edge device", "ie hub",
-    "industrial edge", "cloud", "mqtt", "opc ua", "opcua", "s7", "simatic",
-    "insights hub", "mindsphere", "databus", "ie databus",
+    "verify", "confirm", "check", "validate", "review", "ensure",
+    "status", "result", "expected", "successful", "visible", "enabled",
+    "disabled", "running", "connected", "ready"
 }
 
 _DATA_FLOW_VERBS = {
-    "sends", "transfers", "forwards", "publishes", "subscribes", "routes",
-    "collects", "streams", "pushes", "pulls", "ingests", "emits",
+    "send", "receive", "forward", "publish", "subscribe", "collect",
+    "transfer", "sync", "synchronize", "export", "import", "push",
+    "pull", "route", "transmit", "stream"
+}
+
+_NETWORK_NOUNS = {
+    "plc", "hmi", "gateway", "connector", "server", "client", "cloud",
+    "broker", "router", "switch", "network", "edge", "device", "controller",
+    "runtime", "database", "bus", "mqtt", "opc ua"
 }
 
 _RELATION_PATTERNS = [
-    r"(?P<src>.+?)\s+sends\s+.+?\s+to\s+(?P<dst>.+)",
-    r"(?P<src>.+?)\s+publishes\s+.+?\s+to\s+(?P<dst>.+)",
-    r"(?P<src>.+?)\s+communicates\s+with\s+(?P<dst>.+)",
-    r"(?P<src>.+?)\s+connects\s+(?:directly\s+)?to\s+(?P<dst>.+)",
-    r"(?P<src>.+?)\s+transfers\s+.+?\s+to\s+(?P<dst>.+)",
-    r"(?P<src>.+?)\s+forwards\s+.+?\s+to\s+(?P<dst>.+)",
-    r"(?P<src>.+?)\s+routes\s+.+?\s+to\s+(?P<dst>.+)",
-    r"(?P<src>.+?)\s+passes\s+.+?\s+to\s+(?P<dst>.+)",
-    r"(?P<src>.+?)\s+→\s+(?P<dst>.+)",
-    r"(?P<src>.+?)\s+->\s+(?P<dst>.+)",
+    r"(?P<src>[A-Za-z0-9_ /-]+?)\s+(?:connects to|is connected to|communicates with|sends to|publishes to|subscribes to|forwards to|routes to|transfers to)\s+(?P<dst>[A-Za-z0-9_ /-]+)",
+    r"(?P<src>[A-Za-z0-9_ /-]+?)\s+(?:via|through)\s+(?P<dst>[A-Za-z0-9_ /-]+)",
 ]
 
-
-# ─────────────────────────────────────────────
 # Signal extraction
 # ─────────────────────────────────────────────
 
@@ -654,6 +644,52 @@ def _build_generated_artifact(
     return None
 
 
+def _generate_alt_text(spec: dict | None, placement_hint: dict | None) -> str:
+    """Draft descriptive alt text from the screenshot specification."""
+    if spec:
+        purpose = spec.get("purpose", "").strip().rstrip(".")
+        focus = spec.get("focus_area", "").strip()
+        if purpose and focus:
+            return f"{purpose} - {focus} highlighted"
+        if purpose:
+            return purpose
+    if placement_hint and placement_hint.get("placement") == "after_step":
+        step_text = placement_hint.get("step_text", "").strip().rstrip(".")
+        if step_text:
+            return f"UI state after: {step_text}"
+    return "Screenshot of the required UI state"
+
+
+def _generate_screenshot_filename(spec: dict | None, placement_hint: dict | None) -> str:
+    """Generate a slug-based filename from spec context and step."""
+    def slugify(text: str) -> str:
+        text = text.lower().strip()
+        text = re.sub(r"[^\w\s-]", "", text)
+        text = re.sub(r"[\s_]+", "-", text)
+        text = re.sub(r"-{2,}", "-", text)
+        return text.strip("-")[:50]
+
+    parts: list[str] = []
+
+    if spec:
+        page = spec.get("context", {}).get("page", "")
+        if page and page.lower() not in ("current page", ""):
+            parts.append(slugify(page))
+
+    if placement_hint and placement_hint.get("placement") == "after_step":
+        step_text = placement_hint.get("step_text", "").strip()
+        if step_text:
+            stop_words = {"you", "have", "the", "a", "an", "your", "from", "to", "in", "on", "of", "is", "are", "and"}
+            words = re.sub(r"[^\w\s]", "", step_text).split()
+            keywords = [w.lower() for w in words if w.lower() not in stop_words][:5]
+            if keywords:
+                parts.append("-".join(keywords))
+
+    if parts:
+        return "-".join(parts) + ".png"
+    return "screenshot.png"
+
+
 def _build_insertion_snippet(visual_type: str, generated_artifact: dict | None, placement_hint: dict | None) -> str | None:
     placement = placement_hint.get("display_text") if placement_hint else "At the recommended location in this section"
 
@@ -681,14 +717,12 @@ def _build_insertion_snippet(visual_type: str, generated_artifact: dict | None, 
         )
 
     if visual_type in {"Screenshot", "Configuration Screenshot", "Annotated Screenshot"}:
-        alt_text = "Screenshot of the required UI state"
-        if placement_hint and placement_hint.get("placement") == "after_step":
-            step_text = placement_hint.get("step_text", "").strip().rstrip(".")
-            if step_text:
-                alt_text = f"UI state after: {step_text}"
+        spec = generated_artifact.get("specification") if generated_artifact else None
+        alt_text = _generate_alt_text(spec, placement_hint)
+        filename = _generate_screenshot_filename(spec, placement_hint)
         return (
             f"<!-- Insert {visual_type}: {placement} -->\n"
-            f"![{alt_text}](../media/your-screenshot.png)"
+            f"![{alt_text}](../media/{filename})"
         )
 
     if visual_type == "Decision Tree":
