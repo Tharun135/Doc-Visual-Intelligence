@@ -128,8 +128,19 @@ def generate_architecture_svg(title: str, nodes: list[dict], edges: list[dict], 
     parts: list[str] = []
     parts.append(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {canvas_w} {canvas_h}" role="img" aria-label="{escape(title)} architecture diagram">')
     parts.append("  <defs>")
-    parts.append('    <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">')
-    parts.append(f'      <polygon points="0 0, 12 4, 0 8" fill="{theme["connector"]}"/>')
+    parts.append("    <style>")
+    parts.append("      @keyframes archFlowAnim {")
+    parts.append("        from { stroke-dashoffset: 12; }")
+    parts.append("        to { stroke-dashoffset: 0; }")
+    parts.append("      }")
+    parts.append("      .flow-line {")
+    parts.append("        animation: archFlowAnim 0.8s linear infinite;")
+    parts.append("      }")
+    parts.append("    </style>")
+    import uuid
+    marker_id = f"arrowhead_{uuid.uuid4().hex[:8]}"
+    parts.append(f'    <marker id="{marker_id}" markerWidth="20" markerHeight="20" refX="16" refY="10" orient="auto" markerUnits="userSpaceOnUse">')
+    parts.append(f'      <polygon points="0 2, 16 10, 0 18" fill="{theme["connector"]}"/>')
     parts.append("    </marker>")
     parts.append("  </defs>")
 
@@ -191,9 +202,10 @@ def generate_architecture_svg(title: str, nodes: list[dict], edges: list[dict], 
         edge_type = edge.get("type", "connects")
         dashed = edge_type in {"connects", "communicates"}
         dash_style = ' stroke-dasharray="6 6"' if dashed else ""
+        class_attr = ' class="flow-line"' if dashed else ""
 
         parts.append(
-            f'  <line x1="{start_x}" y1="{start_y}" x2="{end_x}" y2="{end_y}" stroke="{theme["connector"]}" stroke-width="3" opacity="0.95"{dash_style} marker-end="url(#arrowhead)"/>'
+            f'  <line{class_attr} x1="{start_x}" y1="{start_y}" x2="{end_x}" y2="{end_y}" stroke="{theme["connector"]}" stroke-width="3" opacity="0.95"{dash_style} marker-end="url(#{marker_id})"/>'
         )
 
         label = edge.get("protocol") or edge.get("label") or ""
@@ -274,7 +286,9 @@ def generate_architecture_svg(title: str, nodes: list[dict], edges: list[dict], 
         legend_x = canvas_w - legend_w - 30
         legend_y = canvas_h - legend_h - 26
         
-        parts.append(f'  <rect x="{legend_x}" y="{legend_y}" width="{legend_w}" height="{legend_h}" rx="10" fill="#0A1938" stroke="#355C7D" stroke-width="1.6" opacity="0.95"/>')
+        legend_bg = theme.get("legendBg", "#0A1938")
+        legend_stroke = theme.get("legendStroke", "#355C7D")
+        parts.append(f'  <rect x="{legend_x}" y="{legend_y}" width="{legend_w}" height="{legend_h}" rx="10" fill="{legend_bg}" stroke="{legend_stroke}" stroke-width="1.6" opacity="0.95"/>')
         parts.append(f'  <text x="{legend_x + 16}" y="{legend_y + 20}" fill="{theme["legendText"]}" font-size="13" font-family="{theme["fontFamily"]}" font-weight="700">Legend</text>')
 
         row_y = legend_y + 35

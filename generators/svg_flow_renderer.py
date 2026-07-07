@@ -1,4 +1,5 @@
 """Native SVG renderer for simple linear documentation workflows."""
+# Trigger reload
 
 from functools import lru_cache
 from html import escape
@@ -10,7 +11,7 @@ import textwrap
 _CANVAS_WIDTH = 980
 _MIN_CARD_WIDTH = 300
 _CARD_HEIGHT = 120
-_TOP_MARGIN = 140
+_TOP_MARGIN = 48
 _BOTTOM_MARGIN = 48
 _LEFT_PAD = 28
 
@@ -204,17 +205,23 @@ def generate_simple_flow_svg(title: str, steps: list[str], signals: dict | None 
     parts: list[str] = []
     parts.append(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {canvas_width} {canvas_height}" role="img" aria-label="{escape(title)} flow diagram">')
     parts.append("  <defs>")
-    parts.append("    <marker id=\"stepArrow\" markerWidth=\"18\" markerHeight=\"18\" refX=\"7\" refY=\"7\" orient=\"auto\">")
-    parts.append(f'      <path d="M0,0 L14,7 L0,14 z" fill="{connector}"/>')
+    parts.append("    <style>")
+    parts.append("      @keyframes flowAnim {")
+    parts.append("        from { stroke-dashoffset: 14; }")
+    parts.append("        to { stroke-dashoffset: 0; }")
+    parts.append("      }")
+    parts.append("      .flow-line {")
+    parts.append("        animation: flowAnim 0.8s linear infinite;")
+    parts.append("      }")
+    parts.append("    </style>")
+    import uuid
+    marker_id = f"stepArrow_{uuid.uuid4().hex[:8]}"
+    parts.append(f"    <marker id=\"{marker_id}\" markerWidth=\"24\" markerHeight=\"24\" refX=\"18\" refY=\"12\" orient=\"auto\" markerUnits=\"userSpaceOnUse\">")
+    parts.append(f'      <path d="M0,4 L18,12 L0,20 z" fill="{connector}"/>')
     parts.append("    </marker>")
     parts.append("  </defs>")
 
     parts.append(f'  <rect width="{canvas_width}" height="{canvas_height}" fill="{theme["background"]}" rx="20" ry="20"/>')
-    parts.append("  <g>")
-    parts.append(f'    <text x="{canvas_width // 2}" y="52" text-anchor="middle" fill="{theme["title"]}" font-size="{title_size}" font-weight="700" font-family="{font_family}">{escape(title)}</text>')
-    parts.append(f'    <line x1="{canvas_width // 2 - 200}" y1="74" x2="{canvas_width // 2 + 200}" y2="74" stroke="{theme["activityFill"]}" stroke-width="2.2" opacity="0.9"/>')
-    parts.append(f'    <text x="{canvas_width // 2}" y="102" text-anchor="middle" fill="{theme["subtitle"]}" font-size="{subtitle_size}" font-family="{font_family}" letter-spacing="1">{total_steps} STEPS</text>')
-    parts.append("  </g>")
 
     for index, item in enumerate(wrapped_steps, start=1):
         kind, icon, label, lines = item
@@ -228,7 +235,7 @@ def generate_simple_flow_svg(title: str, steps: list[str], signals: dict | None 
             line_start = y + _DYNAMIC_CARD_HEIGHT + 12
             line_end = next_y - 12
             parts.append(
-                f'  <line x1="{canvas_width // 2}" y1="{line_start}" x2="{canvas_width // 2}" y2="{line_end}" stroke="{connector}" stroke-width="3.2" stroke-dasharray="6 8" opacity="0.96" marker-end="url(#stepArrow)"/>'
+                f'  <line class="flow-line" x1="{canvas_width // 2}" y1="{line_start}" x2="{canvas_width // 2}" y2="{line_end}" stroke="{connector}" stroke-width="3.2" stroke-dasharray="6 8" opacity="0.96" marker-end="url(#{marker_id})"/>'
             )
 
         # Card background
