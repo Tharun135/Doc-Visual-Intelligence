@@ -53,10 +53,18 @@ class ClientServerLayout(PatternLayout):
         servers = []
 
         for node in self.nodes:
-            if node["type"] in ["interface", "application", "device"]:
+            if node["type"] in ["interface", "application", "device", "runtime", "connector", "ui"]:
                 clients.append(node)
             else:
                 servers.append(node)
+
+        # Fallback if everything was grouped into one side
+        if not clients and len(servers) > 1:
+            clients = servers[:len(servers)//2]
+            servers = servers[len(servers)//2:]
+        elif not servers and len(clients) > 1:
+            servers = clients[:len(clients)//2]
+            clients = clients[len(clients)//2:]
 
         margin_x = 150
         margin_y = 100

@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initArtifactTools();
     initInsertButtons();
     initHelpModal();
+    initVisualPreview();
 });
 
 
@@ -731,6 +732,7 @@ const observer = new MutationObserver(() => {
     initPlacementHighlight();
     initFeedbackButtons();
     initPlantUMLRenderButtons();
+    initVisualPreview();
 });
 
 /**
@@ -769,6 +771,77 @@ function initHelpModal() {
         if (e.key === 'Escape' && helpModal.classList.contains('active')) {
             helpModal.classList.remove('active');
             document.body.style.overflow = 'auto';
+        }
+    });
+}
+
+/**
+ * Initialize Visual Preview Modal
+ */
+function initVisualPreview() {
+    const previewModal = document.getElementById('previewModal');
+    const closePreviewBtn = document.getElementById('closePreviewBtn');
+    const previewModalOverlay = document.getElementById('previewModalOverlay');
+    const previewModalBody = document.getElementById('previewModalBody');
+    const previewModalTitle = document.getElementById('previewModalTitle');
+
+    if (!previewModal || !closePreviewBtn || !previewModalBody) return;
+
+    // Attach click listener to all artifact previews
+    document.querySelectorAll('.artifact-mermaid-preview, .artifact-svg-preview').forEach(preview => {
+        if (preview.dataset.previewBound === 'true') return;
+        preview.dataset.previewBound = 'true';
+        
+        // Make it look clickable
+        preview.style.cursor = 'zoom-in';
+        preview.title = 'Click to enlarge';
+        
+        preview.addEventListener('click', (e) => {
+            // Check if it's already generated and has an SVG
+            const svgEl = preview.querySelector('svg');
+            if (!svgEl) return;
+            
+            // Get title from card if available
+            const card = preview.closest('.reco-card');
+            if (card) {
+                const titleEl = card.querySelector('.reco-type-text');
+                if (titleEl) {
+                    previewModalTitle.textContent = titleEl.textContent + ' Preview';
+                } else {
+                    previewModalTitle.textContent = 'Visual Preview';
+                }
+            }
+            
+            // Clone the visual content
+            previewModalBody.innerHTML = '';
+            const clonedSvg = svgEl.cloneNode(true);
+            
+            // Allow it to scale naturally in the modal
+            clonedSvg.style.width = '100%';
+            clonedSvg.style.height = 'auto';
+            clonedSvg.style.maxHeight = '80vh';
+            
+            previewModalBody.appendChild(clonedSvg);
+            
+            // Show modal
+            previewModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+    });
+
+    const closePreview = () => {
+        previewModal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    };
+
+    closePreviewBtn.addEventListener('click', closePreview);
+    if (previewModalOverlay) {
+        previewModalOverlay.addEventListener('click', closePreview);
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && previewModal.classList.contains('active')) {
+            closePreview();
         }
     });
 }

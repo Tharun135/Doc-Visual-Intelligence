@@ -202,7 +202,7 @@ def _clean_entity_phrase(text: str) -> str:
     cleaned = re.sub(r"\s+", " ", cleaned)
     cleaned = re.sub(r"\b(using|via|over|through|for)\b.*$", "", cleaned, flags=re.IGNORECASE)
     cleaned = ENTITY_TRAILING_RELATIONSHIP_RE.sub("", cleaned)
-    cleaned = re.sub(r"\bacts?\s+as\s+(?:an?\s+)?client\b", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bacts?\s+as\s+(?:an?\s+)?(?:client|server)\b", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"^(?:it|they|this|that)\b\s*", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\b(and|or)$", "", cleaned, flags=re.IGNORECASE)
     return cleaned.strip(" ,.;:")
@@ -338,11 +338,11 @@ def _find_relationships_in_text(text: str) -> list[dict]:
             "containment",
         ),
         (
-            rf"^(?P<src>.+?)\s+(?P<verb>{forward_verbs})\s+(?:.+?\s+)?to\s+(?P<dst>.+?)(?:\s+(?:using|via|over|through|with)\s+(?P<proto>[^.;,]+))?$",
+            rf"^(?P<src>.+?)\s+(?P<verb>{forward_verbs})\s+(?:(?P<obj>.+?)\s+)?to\s+(?P<dst>.+?)(?:\s+(?:using|via|over|through|with)\s+(?P<proto>[^.;,]+))?$",
             "forward",
         ),
         (
-            rf"^(?P<dst>.+?)\s+(?P<verb>{reverse_verbs})\s+(?:.+?\s+)?from\s+(?P<src>.+?)(?:\s+(?:using|via|over|through|with)\s+(?P<proto>[^.;,]+))?$",
+            rf"^(?P<dst>.+?)\s+(?P<verb>{reverse_verbs})\s+(?:(?P<obj>.+?)\s+)?from\s+(?P<src>.+?)(?:\s+(?:using|via|over|through|with)\s+(?P<proto>[^.;,]+))?$",
             "reverse",
         ),
         (
@@ -367,8 +367,26 @@ def _find_relationships_in_text(text: str) -> list[dict]:
 
             verb_text = re.sub(r"\s+", " ", match.group("verb").strip().lower())
             verb_type = RELATIONSHIP_VERBS.get(verb_text, verb_text)
+            
             protocol_raw = (match.group("proto") or "").strip()
-            protocol = _extract_protocol(protocol_raw) or _extract_protocol(sentence_clean)
+            protocol = _extract_protocol(protocol_raw) or _extract_protocol(sentence_clean) or protocol_raw
+            
+            # If there is a direct object like "data" in "sends data to", grab it
+            obj_text = ""
+            if "obj" in match.groupdict() and match.group("obj"):
+                obj_text = match.group("obj").strip()
+                # Clean up determiners from the object
+                obj_text = re.sub(r"^(?:the|a|an|some)\s+", "", obj_text, flags=re.IGNORECASE)
+                
+            # Create a more meaningful descriptive label
+            if protocol and obj_text:
+                descriptive_label = f"{verb_type} {obj_text} via {protocol}"
+            elif protocol:
+                descriptive_label = protocol
+            elif obj_text:
+                descriptive_label = f"{verb_type} {obj_text}"
+            else:
+                descriptive_label = verb_type
 
             relationships.append(
                 {
@@ -379,7 +397,7 @@ def _find_relationships_in_text(text: str) -> list[dict]:
                     "source_type": _infer_node_type(source_raw, knowledge),
                     "target_type": _infer_node_type(target_raw, knowledge),
                     "type": verb_type,
-                    "protocol": protocol,
+                    "protocol": descriptive_label, # Store descriptive label here for downstream use
                     "source_raw": source_raw,
                     "target_raw": target_raw,
                     "direction": direction,
@@ -463,6 +481,10 @@ def parse_section_for_architecture(section_title: str, section_content: str, for
         )
 
     nodes, edges = _collapse_generic_nodes(nodes, edges)
+
+    # Filter out orphan nodes that have no edges
+    connected_ids = {e["source"] for e in edges} | {e["target"] for e in edges}
+    nodes = [n for n in nodes if n["id"] in connected_ids]
 
     return {
         "title": section_title,

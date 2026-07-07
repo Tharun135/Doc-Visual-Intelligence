@@ -243,19 +243,15 @@ def generate_simple_flow_svg(title: str, steps: list[str], signals: dict | None 
         parts.append(
             f'  <text x="{number_x}" y="{cy + 6}" text-anchor="middle" fill="{theme["numberText"]}" font-size="{number_size}" font-family="{font_family}" font-weight="700">{index}</text>'
         )
-        parts.append(
-            f'  <text x="{text_center_x}" y="{y + 40}" text-anchor="middle" fill="{text_color}" font-size="{card_label_size}" font-family="{font_family}" opacity="0.92" letter-spacing="0.6">{escape(label)}</text>'
-        )
-        
         if len(lines) == 1:
-            parts.append(f'  <text x="{text_center_x}" y="{y + 94}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>')
-        elif len(lines) == 2:
             parts.append(f'  <text x="{text_center_x}" y="{y + 80}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>')
-            parts.append(f'  <text x="{text_center_x}" y="{y + 108}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[1])}</text>')
+        elif len(lines) == 2:
+            parts.append(f'  <text x="{text_center_x}" y="{y + 66}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>')
+            parts.append(f'  <text x="{text_center_x}" y="{y + 94}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[1])}</text>')
         else:
-            parts.append(f'  <text x="{text_center_x}" y="{y + 70}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>')
-            parts.append(f'  <text x="{text_center_x}" y="{y + 98}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[1])}</text>')
-            parts.append(f'  <text x="{text_center_x}" y="{y + 126}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[2])}</text>')
+            parts.append(f'  <text x="{text_center_x}" y="{y + 52}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[0])}</text>')
+            parts.append(f'  <text x="{text_center_x}" y="{y + 80}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[1])}</text>')
+            parts.append(f'  <text x="{text_center_x}" y="{y + 108}" text-anchor="middle" fill="{text_color}" font-size="{card_text_size}" font-family="{font_family}" font-weight="600">{escape(lines[2])}</text>')
 
     parts.append("</svg>")
     return "\n".join(parts)

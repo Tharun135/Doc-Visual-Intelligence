@@ -245,26 +245,46 @@ def generate_architecture_svg(title: str, nodes: list[dict], edges: list[dict], 
             )
 
     # Legend to explain color meaning.
-    legend_entries = [
-        ("cloud", "Cloud Service"),
-        ("gateway", "Gateway"),
-        ("application", "Application"),
-        ("device", "Device"),
-        ("database", "Database"),
-    ]
-    legend_x = canvas_w - 310
-    legend_y = canvas_h - 118
-    parts.append(f'  <rect x="{legend_x}" y="{legend_y}" width="280" height="92" rx="10" fill="#0A1938" stroke="#355C7D" stroke-width="1.6" opacity="0.95"/>')
-    parts.append(f'  <text x="{legend_x + 16}" y="{legend_y + 20}" fill="{theme["legendText"]}" font-size="13" font-family="{theme["fontFamily"]}" font-weight="700">Legend</text>')
+    type_display_names = {
+        "cloud": "Cloud Service",
+        "server": "Server",
+        "gateway": "Gateway",
+        "network_component": "Network",
+        "database": "Database",
+        "device": "Device",
+        "runtime": "Runtime",
+        "application": "Application",
+        "interface": "Interface",
+        "system": "System",
+        "external_system": "External",
+    }
+    present_types = set()
+    for node in nodes:
+        if node["id"] not in hidden_nodes and node["id"] in pos:
+            present_types.add(node.get("type", "application"))
+            
+    legend_entries = []
+    for t in sorted(present_types):
+        legend_entries.append((t, type_display_names.get(t, t.title())))
 
-    row_y = legend_y + 40
-    col_split = legend_x + 138
-    for idx, (type_name, display_name) in enumerate(legend_entries):
-        col_x = legend_x + 14 if idx < 3 else col_split
-        y = row_y + (idx % 3) * 20
-        fill, border, _ = _node_colors(type_name, theme)
-        parts.append(f'  <rect x="{col_x}" y="{y - 10}" width="14" height="14" rx="3" fill="{fill}" stroke="{border}" stroke-width="1"/>')
-        parts.append(f'  <text x="{col_x + 22}" y="{y + 1}" fill="{theme["legendText"]}" font-size="12" font-family="{theme["fontFamily"]}">{display_name}</text>')
+    if legend_entries:
+        rows = math.ceil(len(legend_entries) / 2.0)
+        legend_h = 30 + rows * 22
+        legend_w = 280 if len(legend_entries) > 1 else 140
+        legend_x = canvas_w - legend_w - 30
+        legend_y = canvas_h - legend_h - 26
+        
+        parts.append(f'  <rect x="{legend_x}" y="{legend_y}" width="{legend_w}" height="{legend_h}" rx="10" fill="#0A1938" stroke="#355C7D" stroke-width="1.6" opacity="0.95"/>')
+        parts.append(f'  <text x="{legend_x + 16}" y="{legend_y + 20}" fill="{theme["legendText"]}" font-size="13" font-family="{theme["fontFamily"]}" font-weight="700">Legend</text>')
+
+        row_y = legend_y + 35
+        col_split = legend_x + 138
+        for idx, (type_name, display_name) in enumerate(legend_entries):
+            col_x = legend_x + 14 if (idx % 2 == 0 or len(legend_entries) == 1) else col_split
+            y = row_y + (idx // 2) * 20
+            fill, border, _ = _node_colors(type_name, theme)
+            parts.append(f'  <rect x="{col_x}" y="{y - 10}" width="14" height="14" rx="3" fill="{fill}" stroke="{border}" stroke-width="1"/>')
+            parts.append(f'  <text x="{col_x + 22}" y="{y + 1}" fill="{theme["legendText"]}" font-size="12" font-family="{theme["fontFamily"]}">{display_name}</text>')
 
     parts.append("</svg>")
     return "\n".join(parts)

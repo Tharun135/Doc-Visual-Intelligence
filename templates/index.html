@@ -108,7 +108,7 @@
                     <span class="btn-text">Analyze Visual Opportunities</span>
                     <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px; height:18px;">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 5"></polyline>
+                        <polyline points="12 5 19 12 12 19"></polyline>
                     </svg>
                 </button>
             </form>
@@ -953,6 +953,25 @@
                     <p>This tool uses rule-based detection to identify opportunities for visual aids. Results are suggestions—always review before making changes to your documents.</p>
                     <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">Created to help technical writers enhance documentation with strategic visual aids.</p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal for Full Size Visuals -->
+    <div id="previewModal" class="help-modal">
+        <div class="help-modal-overlay" id="previewModalOverlay"></div>
+        <div class="help-modal-content preview-modal-content" style="max-width: 90vw; max-height: 95vh; display: flex; flex-direction: column;">
+            <div class="help-modal-header">
+                <h2 id="previewModalTitle">Visual Preview</h2>
+                <button type="button" id="closePreviewBtn" class="close-help-btn" title="Close preview">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="help-modal-body" id="previewModalBody" style="flex-grow: 1; overflow: auto; display: flex; justify-content: center; align-items: center; padding: 2rem;">
+                <!-- Content injected here -->
             </div>
         </div>
     </div>
