@@ -303,7 +303,7 @@ def _match_pr_screenshot(signals: dict) -> Optional[RuleResult]:
     if verifications >= 1:
         evidence.append("Verification step detected — screenshot confirms expected state")
 
-    if steps >= 8 and ui_density >= 3.0:
+    if steps >= 5 and ui_density >= 3.0:
         visual_type = "GIF / Video Tutorial"
         rationale = "Procedure is too long and UI-heavy for static screenshots; a continuous recording is required."
     else:
