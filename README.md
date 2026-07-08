@@ -31,6 +31,14 @@ A Flask web application that analyzes technical documents and recommends where t
 - Uses entity and relationship extraction for diagram blueprint generation instead of hardcoded patterns.
 - Exposes content-type classification confidence (e.g., "Procedure (95%)") so users can identify ambiguous sections.
 
+## Version 5: Native Visual Generation
+
+- Generates native, downloadable SVG flowcharts directly from procedural text steps.
+- Renders detailed SVG architecture diagrams automatically from detected semantic components and relationships.
+- Incorporates a sleek, unified professional UI theme (Siemens Teal) across all generated visual assets.
+- Uses dynamic CSS keyframe animations within SVGs (`stroke-dashoffset`) to show data and process flow direction.
+- Implements robust inline SVG architecture (e.g., unique `uuid`-based marker references) to ensure glitch-free rendering of multiple diagrams on a single page.
+
 ## Project Structure
 
 ```text
