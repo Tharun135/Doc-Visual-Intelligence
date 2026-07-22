@@ -1,9 +1,12 @@
 """Architecture diagram parser - extract components and relationships from documentation."""
 
 import json
+import logging
 import re
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 RELATIONSHIP_VERBS = {
@@ -252,9 +255,10 @@ def _infer_node_type(entity_text: str, knowledge: dict) -> str:
 
 
 def _extract_component_mentions(text: str, knowledge: dict) -> list[dict]:
-    """Extract likely component names from title-case architecture phrases."""
+    """Extract likely component names from title-case architecture phrases and knowledge-model aliases."""
     mentions: dict[str, dict] = {}
 
+    # Pass 1: Title-case phrases ending in known component-type keywords.
     title_case_pattern = (
         r"\b([A-Z][A-Za-z0-9-]*(?:\s+[A-Z][A-Za-z0-9-]*)*"
         r"\s+(?:Application|Server|Gateway|Device|Connector|Runtime|Database|PLC|Controller|System))\b"
@@ -269,6 +273,28 @@ def _extract_component_mentions(text: str, knowledge: dict) -> list[dict]:
             "name": phrase,
             "type": _infer_node_type(phrase, knowledge),
         }
+
+    # Pass 2: Knowledge-model aliases (case-insensitive).  This catches common
+    # lowercase or mixed-case terms like "gateway", "MQTT broker", "cloud", "edge"
+    # that would otherwise be missed, causing the entity-count gate to block parsing.
+    for canonical, entity_def in knowledge.get("entities", {}).items():
+        entity_type = _normalize_type(entity_def.get("type", "application"))
+        for alias in entity_def.get("aliases", []):
+            pattern = r"\b" + re.escape(alias) + r"\b"
+            for match in re.finditer(pattern, text, re.IGNORECASE):
+                # Prefer the matched surface form over the alias key so that
+                # "MQTT Broker" appears in the diagram rather than "broker".
+                surface = match.group(0)
+                phrase = _clean_entity_phrase(surface)
+                if not phrase or len(phrase) < 2:
+                    continue
+                node_id = _slugify(phrase)
+                if node_id not in mentions:
+                    mentions[node_id] = {
+                        "id": node_id,
+                        "name": phrase,
+                        "type": entity_type,
+                    }
 
     return list(mentions.values())
 
@@ -318,6 +344,19 @@ def _collapse_generic_nodes(nodes: list[dict], edges: list[dict]) -> tuple[list[
     return filtered_nodes, updated_edges
 
 
+_LIST_MARKER_RE = re.compile(r"^[-*+•]\s+|^\d+[.)]\s+", re.UNICODE)
+_INTRO_PHRASE_RE = re.compile(
+    r"^(?:"
+    r"in\s+(?:this|that|the)\s+(?:\w+\s+){0,3}(?:setup|configuration|architecture|case|scenario|example|system|diagram),?\s+|"
+    r"for\s+(?:this|that|example|instance)(?:\s+\w+){0,2},?\s+|"
+    r"as\s+(?:a\s+result|an?\s+\w+)(?:\s+\w+){0,2},?\s+|"
+    r"note\s+that\s+|additionally,?\s+|therefore,?\s+|thus,?\s+|"
+    r"here,?\s+|this\s+means\s+(?:that\s+)?|this\s+allows?\s+|this\s+enables?\s+"
+    r")",
+    re.IGNORECASE,
+)
+
+
 def _find_relationships_in_text(text: str) -> list[dict]:
     """Extract (source, target, type, protocol) from architecture prose."""
     relationships = []
@@ -352,7 +391,12 @@ def _find_relationships_in_text(text: str) -> list[dict]:
     ]
 
     for sentence in sentence_candidates:
-        sentence_clean = sentence.strip().strip(".;")
+        # Strip markdown list markers (- item, * item, 1. item) so they are not
+        # captured as part of the source entity name and break pattern matching.
+        sentence_clean = _LIST_MARKER_RE.sub("", sentence.strip()).strip(".;")
+        # Strip common leading adverbial/introductory phrases that would otherwise
+        # pollute the source entity capture group.
+        sentence_clean = _INTRO_PHRASE_RE.sub("", sentence_clean).strip()
         for pattern, direction in patterns:
             match = re.match(pattern, sentence_clean, re.IGNORECASE)
             if not match:
@@ -482,9 +526,24 @@ def parse_section_for_architecture(section_title: str, section_content: str, for
 
     nodes, edges = _collapse_generic_nodes(nodes, edges)
 
+    if not edges:
+        logger.warning(
+            "Architecture parse for '%s': all edges eliminated by generic-node collapse "
+            "(had %d relationships, %d raw nodes). Returning None.",
+            section_title, len(relationships), len(node_index),
+        )
+        return None
+
     # Filter out orphan nodes that have no edges
     connected_ids = {e["source"] for e in edges} | {e["target"] for e in edges}
     nodes = [n for n in nodes if n["id"] in connected_ids]
+
+    if not nodes:
+        logger.warning(
+            "Architecture parse for '%s': all nodes are orphans after collapse. Returning None.",
+            section_title,
+        )
+        return None
 
     return {
         "title": section_title,

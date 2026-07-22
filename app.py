@@ -9,7 +9,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from analyzers.text_extractor import extract_text
 from analyzers.section_splitter import split_sections
 from analyzers.visual_detector import detect_visuals, compute_signals
-from mcp.plantuml_server import render_plantuml
+from generators.plantuml_generator import render_plantuml
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
