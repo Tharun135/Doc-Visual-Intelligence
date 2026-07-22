@@ -22,8 +22,16 @@ Individual generators are also exposed for direct use:
     generate_component(title, signals)
 """
 
+import base64
+import logging
+import os
 import re
+import subprocess
+import tempfile
+import zlib
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────
@@ -497,3 +505,117 @@ def generate(visual_type: str, title: str, signals: dict, content: str = "") -> 
         return generate_component(title, signals, content)
 
     return None
+
+
+# ─────────────────────────────────────────────
+# PlantUML rendering (JAR + public API fallback)
+# Moved here from mcp/plantuml_server.py so the
+# app has no MCP dependency.
+# ─────────────────────────────────────────────
+
+_PLANTUML_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"
+
+
+def _encode_6bit(b: int) -> str:
+    return _PLANTUML_CHARS[b & 0x3F]
+
+
+def _append_3bytes(b1: int, b2: int, b3: int) -> str:
+    c1 = b1 >> 2
+    c2 = ((b1 & 0x3) << 4) | (b2 >> 4)
+    c3 = ((b2 & 0xF) << 2) | (b3 >> 6)
+    c4 = b3 & 0x3F
+    return _encode_6bit(c1) + _encode_6bit(c2) + _encode_6bit(c3) + _encode_6bit(c4)
+
+
+def _plantuml_encode(source: str) -> str:
+    """Encode PlantUML source for use in the public REST API URL."""
+    data = zlib.compress(source.encode("utf-8"), 9)[2:-4]
+    result = []
+    i = 0
+    while i < len(data):
+        b1 = data[i]
+        b2 = data[i + 1] if i + 1 < len(data) else 0
+        b3 = data[i + 2] if i + 2 < len(data) else 0
+        result.append(_append_3bytes(b1, b2, b3))
+        i += 3
+    return "".join(result)
+
+
+def _render_via_jar(code: str, jar_path: Path) -> tuple[str | None, str | None]:
+    """Render PlantUML code using a local JAR file. Returns (svg_str, error)."""
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src_file = Path(tmpdir) / "diagram.puml"
+            src_file.write_text(code, encoding="utf-8")
+            result = subprocess.run(
+                ["java", "-jar", str(jar_path), "-tsvg", "-charset", "UTF-8", str(src_file)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode != 0:
+                return None, f"PlantUML JAR error: {result.stderr.strip()}"
+            svg_file = Path(tmpdir) / "diagram.svg"
+            if svg_file.exists():
+                return svg_file.read_text(encoding="utf-8"), None
+            return None, "PlantUML JAR ran but produced no SVG file."
+    except FileNotFoundError:
+        return None, "java is not installed or not on PATH."
+    except subprocess.TimeoutExpired:
+        return None, "PlantUML JAR timed out after 30 seconds."
+    except Exception as exc:
+        return None, f"Unexpected error running PlantUML JAR: {exc}"
+
+
+def _render_via_api(code: str) -> tuple[str | None, str | None]:
+    """Render PlantUML code via the public plantuml.com API. Returns (svg_str, error)."""
+    try:
+        import urllib.request
+        encoded = _plantuml_encode(code)
+        url = f"https://www.plantuml.com/plantuml/svg/{encoded}"
+        req = urllib.request.Request(url, headers={"User-Agent": "Doc-Visual-Intelligence/1.0"})
+        with urllib.request.urlopen(req, timeout=15) as response:
+            svg = response.read().decode("utf-8")
+        if "<svg" not in svg:
+            return None, f"PlantUML API returned unexpected content: {svg[:200]}"
+        return svg, None
+    except Exception as exc:
+        return None, f"PlantUML API request failed: {exc}"
+
+
+def render_plantuml(code: str) -> tuple[str | None, str | None]:
+    """
+    Render PlantUML source code to SVG.
+
+    Tries a local JAR first (PLANTUML_JAR env var or plantuml.jar in the
+    project root), then falls back to the public plantuml.com API.
+
+    Returns
+    -------
+    (svg, error) : tuple[str | None, str | None]
+        On success: (svg_string, None)
+        On failure: (None, error_message)
+    """
+    if not code or not code.strip():
+        return None, "Empty PlantUML code provided."
+
+    jar_env = os.environ.get("PLANTUML_JAR", "")
+    project_jar = Path(__file__).parent.parent / "plantuml.jar"
+
+    if jar_env and Path(jar_env).is_file():
+        logger.info("Rendering via local JAR: %s", jar_env)
+        svg, err = _render_via_jar(code, Path(jar_env))
+        if svg:
+            return svg, None
+        logger.warning("JAR render failed (%s), falling back to API.", err)
+    elif project_jar.is_file():
+        logger.info("Rendering via project JAR: %s", project_jar)
+        svg, err = _render_via_jar(code, project_jar)
+        if svg:
+            return svg, None
+        logger.warning("JAR render failed (%s), falling back to API.", err)
+
+    logger.info("Rendering via PlantUML public API.")
+    return _render_via_api(code)
+

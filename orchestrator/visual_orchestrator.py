@@ -70,7 +70,7 @@ class OrchestratorResult:
 
 def _dispatch_plantuml(rec: dict) -> OrchestratorResult:
     """Send PlantUML code to the MCP server and retrieve SVG."""
-    from mcp.plantuml_server import render_plantuml  # lazy import
+    from generators.plantuml_generator import render_plantuml
 
     code = rec.get("plantuml_code")
     if not code:
