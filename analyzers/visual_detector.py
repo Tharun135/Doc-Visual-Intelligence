@@ -13,7 +13,7 @@ import re
 import logging
 from pathlib import Path
 
-from rules.rule_definitions import PYTHON_RULES, RuleResult
+from rules.rule_definitions import PYTHON_RULES, Rule, RuleResult
 from generators.plantuml_generator import generate as generate_plantuml
 from generators.svg_flow_renderer import generate_simple_flow_svg
 from generators.architecture_orchestrator import generate_architecture_diagram
@@ -43,6 +43,38 @@ def _load_json(path: Path, label: str) -> list | dict:
 
 JSON_RULES: list = _load_json(_RULES_PATH, "visual_rules")
 KNOWLEDGE_MODEL: dict = _load_json(_KNOWLEDGE_PATH, "knowledge_model")
+
+
+def _rule_summary_from_python(rule: Rule) -> dict:
+    return {
+        "id": rule.id,
+        "display_name": rule.display_name,
+        "description": rule.description,
+        "trigger_summary": rule.trigger_summary,
+        "trigger_criteria": rule.trigger_criteria,
+        "reader_question": rule.reader_question,
+        "visual_type": rule.visual_type,
+        "source_label": "Python reasoning rule",
+    }
+
+
+def _rule_summary_from_json(rule: dict) -> dict:
+    return {
+        "id": rule.get("id", "json-rule"),
+        "display_name": rule.get("display_name", rule.get("visual_type", "JSON keyword rule")),
+        "description": rule.get("description", rule.get("reason", "Keyword rule.")),
+        "trigger_summary": rule.get("trigger_summary", rule.get("description", rule.get("reason", "Keyword rule."))),
+        "trigger_criteria": rule.get("trigger_criteria", []),
+        "reader_question": "—",
+        "visual_type": rule.get("visual_type", "Unknown"),
+        "source_label": "JSON keyword rule",
+    }
+
+
+def get_rule_catalog() -> list[dict]:
+    catalog = [_rule_summary_from_python(rule) for rule in PYTHON_RULES]
+    catalog.extend(_rule_summary_from_json(rule) for rule in JSON_RULES)
+    return sorted(catalog, key=lambda item: item["id"])
 
 _ACTION_VERBS = {
     "click", "select", "open", "enter", "type", "choose", "navigate",
@@ -495,6 +527,70 @@ def _shorten_step(step: str) -> str:
         short = " ".join(words[:8]) + "..."
     return short.strip()
 
+
+def _generation_confidence(
+    visual_type: str,
+    signals: dict,
+    generated_artifact: dict | None,
+) -> tuple[int, str]:
+    """Score confidence for auto-generated visual content quality (0-100)."""
+    if visual_type == "Decision Tree":
+        # Disabled intentionally until decision extraction is robust.
+        return 0, "Auto-generation is disabled for decision trees (conditional extraction is unreliable). Use placement hint to author manually."
+
+    if not generated_artifact:
+        return 25, "No generated artifact; rely on placement hint and draft manually."
+
+    if visual_type in {"Workflow Diagram", "Flowchart", "Sequence Diagram"}:
+        steps = signals.get("steps", 0)
+        warnings = signals.get("warnings", 0)
+        verifications = signals.get("verifications", 0)
+        if steps >= 6:
+            reason = f"{steps} procedural steps detected — sufficient structure for reliable generation."
+            if warnings:
+                reason += f" {warnings} warning(s) add ordering constraints."
+            return 85, reason
+        if steps >= 3:
+            reason = f"{steps} procedural steps detected; generation is a reasonable draft."
+            if verifications:
+                reason += f" {verifications} verification step(s) reduce ambiguity."
+            return 70, reason
+        return 55, f"{steps} step(s) detected — too few for confident generation; verify output carefully."
+
+    if visual_type in {"Architecture Diagram", "Topology Diagram", "Data Flow Diagram"}:
+        rel = signals.get("relationship_count", 0)
+        data_flow = signals.get("data_flow_verbs", 0)
+        if rel >= 3:
+            return 88, f"{rel} explicit component relationships detected — diagram should be accurate."
+        if rel >= 1:
+            reason = f"{rel} explicit relationship(s) detected."
+            if data_flow:
+                reason += f" {data_flow} data-flow verb(s) add directional specificity."
+            return 72, reason
+        return 50, "No explicit A→B relationships found; generated diagram is inferred from vocabulary only."
+
+    if visual_type in {"Screenshot", "Configuration Screenshot", "Annotated Screenshot"}:
+        ui = signals.get("ui_interactions", 0)
+        return 80, f"Capture specification generated from {ui} detected UI interaction(s); validate against live interface."
+
+    return 65, "Generation available; validate output against source text before publishing."
+
+
+def _placement_confidence(
+    recommendation_confidence: int,
+    placement_hint: dict | None,
+) -> tuple[int, str]:
+    """Score confidence for placement recommendation separately from content generation."""
+    if not placement_hint:
+        return max(35, recommendation_confidence - 30), "No explicit placement hint for this visual type."
+
+    placement = placement_hint.get("placement")
+    if placement == "after_step":
+        return min(98, recommendation_confidence + 5), "Anchored to an explicit procedural step."
+    if placement == "before_section":
+        return min(95, recommendation_confidence + 3), "Anchored to section context before task execution."
+    return max(45, recommendation_confidence - 10), "Placement hint is generic; verify location manually."
+
 def _build_workflow_artifact(title: str, signals: dict) -> dict | None:
     steps = signals.get("step_lines", [])
     if len(steps) < 2:
@@ -533,52 +629,10 @@ def _build_sequence_artifact(title: str, signals: dict) -> dict | None:
 
 
 def _build_decision_artifact(title: str, content: str) -> dict | None:
-    sentences = re.split(r"(?<=[.!?])\s+|\n", content)
-    conditions = []
-    
-    for s in sentences:
-        s = s.strip()
-        # Simple extraction of "If [condition], [action]" or "If [condition] then [action]"
-        match = re.search(r"\b[Ii]f\b\s+(.+?)(?:,|\sthen\s)\s*(.+)", s)
-        if match:
-            condition = match.group(1).strip()
-            action = match.group(2).strip(" .")
-            conditions.append((condition, action))
-
-    if not conditions:
-        return None
-
-    mermaid = ["flowchart TD"]
-    # Siemens Corporate Branding
-    mermaid.append("    classDef decision fill:#000028,stroke:#009999,stroke-width:2px,color:#fff,rx:8px,ry:8px;")
-    mermaid.append("    classDef action fill:#005F87,stroke:#3eb1c8,stroke-width:2px,color:#fff,rx:8px,ry:8px;")
-    mermaid.append("    classDef endnode fill:#333333,stroke:#666666,stroke-width:2px,color:#fff,rx:20px,ry:20px;")
-
-    mermaid.append('    Start(["Start"]):::endnode')
-    
-    for i, (cond, action) in enumerate(conditions):
-        short_cond = _sanitize(cond)
-        if len(short_cond) > 30: short_cond = short_cond[:30] + "..."
-        
-        short_action = _sanitize(action)
-        if len(short_action) > 40: short_action = short_action[:40] + "..."
-
-        mermaid.append(f'    C{i}{{"❓ {short_cond}?"}}:::decision')
-        mermaid.append(f'    A{i}("{short_action}"):::action')
-        
-        if i == 0:
-            mermaid.append(f"    Start --> C{i}")
-        else:
-            mermaid.append(f"    C{i-1} -->|No| C{i}")
-            
-        mermaid.append(f"    C{i} -->|Yes| A{i}")
-        
-    return {
-        "artifact_type": "workflow", # Triggers mermaid rendering in UI
-        "title": title,
-        "mermaid": "\n".join(mermaid),
-        "summary": f"Generated from {len(conditions)} decision branches.",
-    }
+    # Decision-tree extraction remains heuristic and can degrade trust when
+    # text contains validation gates rather than true reader choices.
+    # Keep recommendation, but avoid auto-generating weak diagrams.
+    return None
 
 
 def _build_generated_artifact(
@@ -881,6 +935,7 @@ def _run_json_rules(
             "evidence": [f"Keywords matched: {', '.join(matched[:4])}"],
             "rationale": rule["reason"],
             "source": f"json:{rule['id']}",
+            "rule_summary": _rule_summary_from_json(rule),
         })
 
     return results
@@ -938,8 +993,12 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             confidence = max(0, confidence - 20)
         confidence = max(0, min(100, confidence + (worthiness_score - 5) * 3))
         placement_hint = _suggest_placement(result.visual_type, content_type, signals)
+        placement_confidence, placement_confidence_reason = _placement_confidence(confidence, placement_hint)
         generated_artifact = _build_generated_artifact(
             result.visual_type, title, content, signals, content_type, placement_hint
+        )
+        generation_confidence, generation_confidence_reason = _generation_confidence(
+            result.visual_type, signals, generated_artifact
         )
         insertion_snippet = _build_insertion_snippet(result.visual_type, generated_artifact, placement_hint)
         generator = _assign_generator(result.visual_type)
@@ -947,6 +1006,15 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             generate_plantuml(result.visual_type, title, signals, content)
             if generator == "plantuml" else None
         )
+
+        rule_summary = _rule_summary_from_python(rule)
+        why_trace = [
+            f"Placement confidence: {placement_confidence}% ({placement_confidence_reason})",
+            f"Generation confidence: {generation_confidence}% ({generation_confidence_reason})",
+            f"Worthiness score: {worthiness_score}/10 ({worthiness_reason})",
+        ]
+        if result.evidence:
+            why_trace.append(f"Signals: {result.evidence[0]}")
 
         python_hits.append({
             "visual_type": result.visual_type,
@@ -966,16 +1034,22 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             "evidence": result.evidence,
             "rationale": result.rationale,
             "source": f"python:{rule.id}",
+            "rule_summary": rule_summary,
             "existing_visuals": existing_assets,
             "gap_message": gap["gap_message"],
             "gap_coverage": gap["coverage_display"],
             "existing_count": gap["existing_count"],
             "required_count": 1,
             "placement_hint": placement_hint,
+            "placement_confidence": placement_confidence,
+            "placement_confidence_reason": placement_confidence_reason,
+            "generation_confidence": generation_confidence,
+            "generation_confidence_reason": generation_confidence_reason,
             "generated_artifact": generated_artifact,
             "orphan_components": _extract_orphan_components(result.visual_type, content, generated_artifact),
             "insertion_snippet": insertion_snippet,
             "suggested_content": _suggest_content(result.visual_type, title, signals, placement_hint),
+            "why_trace": why_trace,
         })
 
     # ── JSON rules ─────────────────────────────
@@ -986,8 +1060,12 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             hit["confidence"] = max(0, hit["confidence"] - 20)
         hit["confidence"] = max(0, min(100, hit["confidence"] + (worthiness_score - 5) * 3))
         placement_hint = _suggest_placement(hit["visual_type"], content_type, signals)
+        placement_confidence, placement_confidence_reason = _placement_confidence(hit["confidence"], placement_hint)
         generated_artifact = _build_generated_artifact(
             hit["visual_type"], title, content, signals, content_type, placement_hint
+        )
+        generation_confidence, generation_confidence_reason = _generation_confidence(
+            hit["visual_type"], signals, generated_artifact
         )
         insertion_snippet = _build_insertion_snippet(hit["visual_type"], generated_artifact, placement_hint)
         generator = _assign_generator(hit["visual_type"])
@@ -995,6 +1073,13 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             generate_plantuml(hit["visual_type"], title, signals, content)
             if generator == "plantuml" else None
         )
+        why_trace = [
+            f"Placement confidence: {placement_confidence}% ({placement_confidence_reason})",
+            f"Generation confidence: {generation_confidence}% ({generation_confidence_reason})",
+            f"Worthiness score: {worthiness_score}/10 ({worthiness_reason})",
+        ]
+        if hit.get("evidence"):
+            why_trace.append(f"Signals: {hit['evidence'][0]}")
         hit.update({
             "generator": generator,
             "plantuml_code": plantuml_code,
@@ -1010,10 +1095,15 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             "existing_count": gap["existing_count"],
             "required_count": 1,
             "placement_hint": placement_hint,
+            "placement_confidence": placement_confidence,
+            "placement_confidence_reason": placement_confidence_reason,
+            "generation_confidence": generation_confidence,
+            "generation_confidence_reason": generation_confidence_reason,
             "generated_artifact": generated_artifact,
             "orphan_components": _extract_orphan_components(hit["visual_type"], content, generated_artifact),
             "insertion_snippet": insertion_snippet,
             "suggested_content": _suggest_content(hit["visual_type"], title, signals, placement_hint),
+            "why_trace": why_trace,
         })
 
     # ── Merge and deduplicate ──────────────────
@@ -1055,10 +1145,19 @@ def detect_visuals(title: str, content: str, section_context: dict | None = None
             "existing_count": 0,
             "required_count": len(a11y_issues),
             "placement_hint": None,
+            "placement_confidence": 100,
+            "placement_confidence_reason": "Accessibility diagnostics are direct checks.",
+            "generation_confidence": 0,
+            "generation_confidence_reason": "No generated visual for accessibility warnings.",
             "generated_artifact": None,
             "orphan_components": [],
             "insertion_snippet": "<!-- Correct format: ![Descriptive Text](url) -->",
             "suggested_content": "Add descriptive Alt-Text to the identified images so screen readers can interpret them.",
+            "why_trace": [
+                "Rule fired: a11y_auditor",
+                "Placement confidence: 100% (direct static validation)",
+                "Generation confidence: 0% (no generated artifact)",
+            ],
         }
         deduped.insert(0, a11y_card)
 
@@ -1155,7 +1254,7 @@ _GENERATOR_MAP: dict[str, str] = {
     # Linear workflows render better as native SVG
     "Workflow Diagram":       "svg_flow",
     "Sequence Diagram":       "plantuml",
-    "Decision Tree":          "plantuml",
+    "Decision Tree":          "manual",
     "Architecture Diagram":   "svg_architecture",
     "Topology Diagram":       "svg_architecture",
     "Data Flow Diagram":      "svg_architecture",

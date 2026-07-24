@@ -12,7 +12,56 @@ document.addEventListener('DOMContentLoaded', () => {
     initInsertButtons();
     initHelpModal();
     initVisualPreview();
+    initPrivacyVerification();
 });
+
+const PRIVACY_MODE_ENABLED = document.body?.dataset?.privacyMode === '1';
+
+function initPrivacyVerification() {
+    const triggerBtn = document.getElementById('privacyVerifyBtn');
+    const card = document.getElementById('privacyVerificationCard');
+    const checksList = document.getElementById('privacyChecksList');
+    const scoreBadge = document.getElementById('privacyScoreBadge');
+    if (!triggerBtn || !card || !checksList || !scoreBadge) {
+        return;
+    }
+
+    const renderCheck = (check) => {
+        const pass = !!check.pass;
+        const icon = pass ? '✔' : '✖';
+        const color = pass ? 'var(--accent-emerald)' : 'var(--accent-rose)';
+        return `<div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:${color}; font-weight:700;">${icon}</span><span>${check.name}</span></div>`;
+    };
+
+    const runVerification = async () => {
+        triggerBtn.setAttribute('disabled', 'disabled');
+        scoreBadge.textContent = 'Running';
+        card.style.display = 'block';
+        checksList.innerHTML = '<div style="color:var(--text-muted);">Running privacy checks...</div>';
+        try {
+            const response = await fetch('/privacy/report', { method: 'GET' });
+            const data = await response.json();
+            if (!response.ok || !data.ok) {
+                throw new Error(data.error || 'Privacy verification failed');
+            }
+
+            scoreBadge.textContent = `${data.score}/100`;
+            scoreBadge.style.color = data.score === 100 ? 'var(--accent-emerald)' : 'var(--accent-amber)';
+            checksList.innerHTML = (data.checks || []).map(renderCheck).join('');
+        } catch (error) {
+            scoreBadge.textContent = 'Error';
+            scoreBadge.style.color = 'var(--accent-rose)';
+            checksList.innerHTML = '<div style="color:var(--accent-rose);">Unable to run verification report.</div>';
+        } finally {
+            triggerBtn.removeAttribute('disabled');
+        }
+    };
+
+    triggerBtn.addEventListener('click', runVerification);
+    if (PRIVACY_MODE_ENABLED) {
+        runVerification();
+    }
+}
 
 
 
@@ -354,7 +403,12 @@ function initArtifactTools() {
     if (window.mermaid) {
         window.mermaid.initialize({
             startOnLoad: false,
-            securityLevel: 'loose',
+            securityLevel: 'strict',
+            htmlLabels: false,
+            flowchart: {
+                htmlLabels: false,
+                useMaxWidth: true,
+            },
             theme: 'dark'
         });
         document.querySelectorAll('.artifact-mermaid-preview').forEach((preview, index) => {
@@ -464,6 +518,14 @@ function initGenerateArtifactButtons() {
 }
 
 function initFeedbackButtons() {
+    if (PRIVACY_MODE_ENABLED) {
+        document.querySelectorAll('.feedback-btn').forEach(button => {
+            button.setAttribute('disabled', 'disabled');
+            button.title = 'Feedback logging is disabled in Privacy Mode';
+        });
+        return;
+    }
+
     document.querySelectorAll('.feedback-btn').forEach(button => {
         if (button.dataset.bound === 'true') {
             return;

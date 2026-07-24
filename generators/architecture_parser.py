@@ -205,6 +205,9 @@ def _clean_entity_phrase(text: str) -> str:
     cleaned = re.sub(r"\s+", " ", cleaned)
     cleaned = re.sub(r"\b(using|via|over|through|for)\b.*$", "", cleaned, flags=re.IGNORECASE)
     cleaned = ENTITY_TRAILING_RELATIONSHIP_RE.sub("", cleaned)
+    # Remove dangling copulas captured from passive constructions like
+    # "X is connected to Y" where source may become "X is".
+    cleaned = re.sub(r"\b(is|are|was|were|be|been|being)\b\s*$", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\bacts?\s+as\s+(?:an?\s+)?(?:client|server)\b", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"^(?:it|they|this|that)\b\s*", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\b(and|or)$", "", cleaned, flags=re.IGNORECASE)
@@ -368,8 +371,8 @@ def _find_relationships_in_text(text: str) -> list[dict]:
 
     forward_verbs = r"(?:sends?|publishes?|forwards?|routes?|writes?|exports?|uploads?|process(?:es)?|stores?|aggregates?)"
     reverse_verbs = r"(?:receives?|reads?|imports?|downloads?|subscribes?)"
-    peer_verbs = r"(?:connects?\s+to|connects?|connected\s+to|communicates?\s+with|communicate\s+with)"
-    containment_verbs = r"(?:runs?\s+on|installed\s+on|hosted\s+on|deployed\s+on|acts?\s+as\s+(?:an?\s+)?client\s+on)"
+    peer_verbs = r"(?:connects?\s+to|connects?|(?:is|are|was|were)\s+connected\s+to|connected\s+to|communicates?\s+with|communicate\s+with)"
+    containment_verbs = r"(?:runs?\s+on|(?:is|are|was|were)\s+installed\s+on|installed\s+on|(?:is|are|was|were)\s+hosted\s+on|hosted\s+on|(?:is|are|was|were)\s+deployed\s+on|deployed\s+on|acts?\s+as\s+(?:an?\s+)?client\s+on)"
 
     patterns = [
         (
@@ -410,7 +413,8 @@ def _find_relationships_in_text(text: str) -> list[dict]:
                 continue
 
             verb_text = re.sub(r"\s+", " ", match.group("verb").strip().lower())
-            verb_type = RELATIONSHIP_VERBS.get(verb_text, verb_text)
+            verb_lookup = re.sub(r"^(?:is|are|was|were)\s+", "", verb_text)
+            verb_type = RELATIONSHIP_VERBS.get(verb_lookup, verb_lookup)
             
             protocol_raw = (match.group("proto") or "").strip()
             protocol = _extract_protocol(protocol_raw) or _extract_protocol(sentence_clean) or protocol_raw

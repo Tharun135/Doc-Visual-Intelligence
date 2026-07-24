@@ -32,6 +32,8 @@ import zlib
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+PRIVACY_MODE = os.environ.get("DVI_PRIVACY_MODE", "1") == "1"
+ALLOW_PLANTUML_API = os.environ.get("DVI_ALLOW_PLANTUML_API", "0") == "1"
 
 
 # ─────────────────────────────────────────────
@@ -589,7 +591,8 @@ def render_plantuml(code: str) -> tuple[str | None, str | None]:
     Render PlantUML source code to SVG.
 
     Tries a local JAR first (PLANTUML_JAR env var or plantuml.jar in the
-    project root), then falls back to the public plantuml.com API.
+    project root). Public API fallback is disabled in privacy mode unless
+    DVI_ALLOW_PLANTUML_API=1 is explicitly set.
 
     Returns
     -------
@@ -615,6 +618,12 @@ def render_plantuml(code: str) -> tuple[str | None, str | None]:
         if svg:
             return svg, None
         logger.warning("JAR render failed (%s), falling back to API.", err)
+
+    if PRIVACY_MODE and not ALLOW_PLANTUML_API:
+        return None, "PlantUML rendering requires a local plantuml.jar in privacy mode. Public API fallback is disabled."
+
+    if not ALLOW_PLANTUML_API:
+        return None, "PlantUML API fallback is disabled. Set DVI_ALLOW_PLANTUML_API=1 to enable remote rendering."
 
     logger.info("Rendering via PlantUML public API.")
     return _render_via_api(code)

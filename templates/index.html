@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doc Visual Intelligence - Analyze Visual Opportunities</title>
+    <title>Doc Visual Advisor - Analyze Visual Opportunities</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260626a') }}">
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script src="{{ url_for('static', filename='vendor/mermaid.min.js') }}"></script>
 </head>
-<body>
+<body data-privacy-mode="{{ 1 if privacy and privacy.privacy_mode else 0 }}">
 
     <!-- Header Panel -->
     <header>
@@ -24,7 +24,7 @@
                     </svg>
                     <div class="logo-radar"></div>
                 </div>
-                <span>Doc Visual Intelligence</span>
+                <span>Doc Visual Advisor</span>
             </a>
             <button type="button" class="header-help-btn" id="helpToggleBtn" title="View user guide">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -34,8 +34,28 @@
                 </svg>
                 <span>Guide</span>
             </button>
+            <button type="button" class="header-help-btn" id="privacyVerifyBtn" title="Run privacy verification">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span>Verify Privacy</span>
+            </button>
         </div>
     </header>
+
+    {% if privacy and privacy.privacy_mode %}
+    <section style="max-width: 1280px; margin: 0.8rem auto 0; padding: 0 1.5rem;">
+        <div style="border:1px solid rgba(88, 214, 171, 0.35); background:rgba(15, 68, 52, 0.28); border-radius:12px; padding:0.7rem 0.9rem; color:var(--text-secondary); font-size:0.86rem;">
+            <strong style="color:var(--text-primary);">Privacy Mode</strong>
+            <span style="margin-left:0.6rem;">Offline processing</span>
+            <span style="margin-left:0.6rem;">No cloud uploads</span>
+            <span style="margin-left:0.6rem;">No telemetry</span>
+            <span style="margin-left:0.6rem;">No document retention</span>
+            <span style="margin-left:0.6rem;">Localhost only</span>
+        </div>
+    </section>
+    {% endif %}
 
     <!-- Main Workspace -->
     <main>
@@ -52,6 +72,7 @@
             </h2>
 
             <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="cached_text" value="{{ original_text | e }}">
                 {% if upload_error %}
                 <div style="margin-bottom: 0.9rem; padding: 0.75rem 0.9rem; border: 1px solid rgba(255,120,120,0.35); border-radius: 10px; color: #ffd9d9; background: rgba(168, 38, 38, 0.2); font-size: 0.9rem;">
                     {{ upload_error }}
@@ -59,21 +80,21 @@
                 {% endif %}
 
                 <!-- Input Mode Tabs -->
-                <div class="tab-container">
-                    <button type="button" class="tab-btn {{ 'active' if input_source != 'text' else '' }}" data-tab="upload">File Upload</button>
-                    <button type="button" class="tab-btn {{ 'active' if input_source == 'text' else '' }}" data-tab="text">Pasted Text</button>
+                <div class="tab-container {{ 'input-locked' if results else '' }}">
+                    <button type="button" class="tab-btn {{ 'active' if input_source != 'text' else '' }}" data-tab="upload" {{ 'disabled' if results else '' }}>File Upload</button>
+                    <button type="button" class="tab-btn {{ 'active' if input_source == 'text' else '' }}" data-tab="text" {{ 'disabled' if results else '' }}>Pasted Text</button>
                 </div>
 
                 <!-- Pasted Text Editor Panel -->
                 <div class="tab-panel {{ 'active' if input_source == 'text' else '' }}" id="text-panel">
                     <div class="textarea-wrapper">
-                        <textarea class="editor" name="pasted_text" placeholder="Type, paste, or load sample documentation text here to inspect..." {{ 'required' if input_source == 'text' else '' }}>{{ original_text if input_source == 'text' else '' }}</textarea>
+                        <textarea class="editor" name="pasted_text" placeholder="Type, paste, or load sample documentation text here to inspect..." {{ 'required' if input_source == 'text' else '' }} {{ 'readonly' if results else '' }}>{{ original_text if input_source == 'text' else '' }}</textarea>
                     </div>
                 </div>
 
                 <!-- File Upload Drag Zone Panel -->
                 <div class="tab-panel {{ 'active' if input_source != 'text' else '' }}" id="upload-panel">
-                    <div class="upload-zone">
+                    <div class="upload-zone {{ 'upload-zone-locked' if results else '' }}">
                         <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="17 8 12 3 7 8"></polyline>
@@ -81,7 +102,7 @@
                         </svg>
                         <p class="upload-text">Drag and drop file here</p>
                         <p class="upload-subtext">Supports .md, .txt, .json, .pdf, .docx files (max 25MB)</p>
-                        <input type="file" name="document" class="file-input" accept=".txt,.md,.json,.pdf,.docx">
+                        <input type="file" name="document" class="file-input" accept=".txt,.md,.json,.pdf,.docx" {{ 'disabled' if results else '' }}>
                     </div>
                     
                     <!-- Selected File Banner -->
@@ -102,15 +123,27 @@
 
 
 
-                <!-- Submit Button -->
-                <button type="submit" class="btn-submit">
-                    <span class="spinner"></span>
-                    <span class="btn-text">Analyze Visual Opportunities</span>
-                    <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px; height:18px;">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                </button>
+                <!-- Action Buttons -->
+                <div class="btn-row">
+                    {% if results %}
+                    <a href="/" class="btn-clear btn-clear-full" title="Clear results and upload a new file">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;flex-shrink:0;">
+                            <polyline points="1 4 1 10 7 10"></polyline>
+                            <path d="M3.51 15a9 9 0 1 0 .49-3.75"></path>
+                        </svg>
+                        <span>Clear All</span>
+                    </a>
+                    {% else %}
+                    <button type="submit" class="btn-submit">
+                        <span class="spinner"></span>
+                        <span class="btn-text">Analyze Visual Opportunities</span>
+                        <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px; height:18px;">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                    {% endif %}
+                </div>
             </form>
         </section>
 
@@ -162,6 +195,16 @@
                                 <span class="stat-val emerald-glow">{{ ns.reco_count }}</span>
                                 <span class="stat-label">VISUAL AIDS ADVISED</span>
                             </div>
+                        </div>
+                    </div>
+
+                    <div id="privacyVerificationCard" class="overview-card" style="margin-bottom: 1.1rem; display:none;">
+                        <div style="padding:0.9rem 1rem;">
+                            <div class="sim-label" style="margin-bottom:0.5rem;">
+                                <span>Privacy Verification</span>
+                                <span class="status" id="privacyScoreBadge">Pending</span>
+                            </div>
+                            <div id="privacyChecksList" style="display:grid; gap:0.35rem; font-size:0.84rem; color:var(--text-secondary);"></div>
                         </div>
                     </div>
 
@@ -255,6 +298,67 @@
                                                     <div class="reco-why-label">Reader benefit</div>
                                                     <p class="reco-reason">{{ suggestion.reason }}</p>
                                                 </div>
+
+                                                <div class="simulator-box" style="padding: 0.7rem 0.9rem; margin-top: 0.55rem;">
+                                                    <div class="sim-label" style="margin-bottom: 0.35rem;">
+                                                        <span>Confidence Tiers</span>
+                                                        <span class="status">Trust Signals</span>
+                                                    </div>
+                                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.55rem;">
+                                                        <div style="border:1px solid rgba(62,177,200,0.28); border-radius:8px; padding:0.45rem 0.55rem;">
+                                                            <div style="font-size:0.78rem; color:var(--text-secondary);">Placement confidence</div>
+                                                            <div style="font-size:1rem; font-weight:600; color:var(--accent-teal);">{{ suggestion.placement_confidence if suggestion.placement_confidence is defined else suggestion.confidence }}%</div>
+                                                        </div>
+                                                        <div style="border:1px solid rgba(245,158,11,0.28); border-radius:8px; padding:0.45rem 0.55rem;">
+                                                            <div style="font-size:0.78rem; color:var(--text-secondary);">Content generation confidence</div>
+                                                            <div style="font-size:1rem; font-weight:600; color:var(--accent-amber);">{{ suggestion.generation_confidence if suggestion.generation_confidence is defined else 0 }}%</div>
+                                                        </div>
+                                                    </div>
+                                                    {% if suggestion.generation_confidence is defined and suggestion.generation_confidence < 60 %}
+                                                    <p class="reco-reason" style="margin:0.45rem 0 0; color:var(--text-secondary);">Auto-generated content is weak for this case. Use the placement hint and draft the visual manually.</p>
+                                                    {% endif %}
+                                                </div>
+
+                                                {% if suggestion.why_trace %}
+                                                <div class="simulator-box" style="padding: 0.75rem 0.95rem; margin-top: 0.6rem;">
+                                                    <div class="sim-label" style="margin-bottom: 0.4rem;">
+                                                        <span>Why this recommendation fired</span>
+                                                        <span class="status">Rule Trace</span>
+                                                    </div>
+                                                    {% if suggestion.rule_summary %}
+                                                    <div style="margin:0 0 0.65rem; padding:0.7rem 0.8rem; border:1px solid rgba(120, 180, 160, 0.16); border-radius:10px; background:rgba(12, 28, 24, 0.45);">
+                                                        <div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:flex-start;">
+                                                            <div>
+                                                                <div style="font-size:0.92rem; font-weight:600; color:var(--text-primary);">{{ suggestion.rule_summary.display_name }}</div>
+                                                                <div style="font-size:0.74rem; color:var(--text-muted); margin-top:0.15rem;">{{ suggestion.rule_summary.id }} · {{ suggestion.rule_summary.source_label }}</div>
+                                                            </div>
+                                                            <span class="status">Rule</span>
+                                                        </div>
+                                                        <p style="margin:0.45rem 0 0; font-size:0.85rem; color:var(--text-secondary);">{{ suggestion.rule_summary.trigger_summary }}</p>
+                                                        <details style="margin-top:0.45rem;">
+                                                            <summary style="cursor:pointer; color:var(--accent-teal); font-size:0.82rem;">See rule definition</summary>
+                                                            <div style="margin-top:0.45rem; font-size:0.82rem; color:var(--text-secondary); line-height:1.5;">
+                                                                <p style="margin:0;">{{ suggestion.rule_summary.description }}</p>
+                                                                {% if suggestion.rule_summary.trigger_criteria %}
+                                                                <p style="margin:0.45rem 0 0.2rem; font-weight:600; color:var(--text-primary); font-size:0.8rem;">Gate conditions (fires when):</p>
+                                                                <ul style="margin:0; padding-left:1.1rem;">
+                                                                    {% for criterion in suggestion.rule_summary.trigger_criteria %}
+                                                                    <li style="margin:0.15rem 0;">{{ criterion }}</li>
+                                                                    {% endfor %}
+                                                                </ul>
+                                                                {% endif %}
+                                                                <p style="margin:0.45rem 0 0; color:var(--text-muted);">Outputs: {{ suggestion.rule_summary.visual_type }}{% if suggestion.rule_summary.reader_question and suggestion.rule_summary.reader_question != '—' %} · Reader question: {{ suggestion.rule_summary.reader_question }}{% endif %}</p>
+                                                            </div>
+                                                        </details>
+                                                    </div>
+                                                    {% endif %}
+                                                    <ul style="margin:0.2rem 0 0; padding-left:1.2rem; font-size:0.86rem; color:var(--text-secondary);">
+                                                        {% for trace in suggestion.why_trace[:5] %}
+                                                        <li style="margin:0.2rem 0;">{{ trace }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+                                                {% endif %}
 
                                                     {% if suggestion.reuse_warning %}
                                                     <div style="display:flex; align-items:flex-start; gap:0.5rem; background:rgba(255,180,0,0.08); border:1px solid rgba(255,180,0,0.35); border-radius:6px; padding:0.5rem 0.75rem; margin-top:0.4rem; margin-bottom:0.3rem; font-size:0.85rem; color:var(--text-secondary);">
@@ -632,12 +736,15 @@
                                                         {% endif %}
                                                     </div>
                                                 {% elif suggestion.visual_type == "Decision Tree" and not suggestion.generated_artifact %}
-                                                    <div class="simulator-box">
+                                                    <div class="simulator-box" style="opacity: 0.55; pointer-events: none;">
                                                         <div class="sim-label">
-                                                            <span>Decision Logic Tree</span>
-                                                            <span class="status">Traversing</span>
+                                                            <span>Decision Logic Tree — Example Structure</span>
+                                                            <span class="status" style="background: rgba(148, 163, 184, 0.35); color: var(--text-secondary);">Template</span>
                                                         </div>
-                                                        <div class="decision-sim">
+                                                        <p class="reco-reason" style="margin: 0.4rem 0 0.6rem 0; color: var(--text-secondary); font-size: 0.85rem;">
+                                                            Auto-generation is disabled for decision trees. Use the placement hint above to manually author a visual that reflects your document's actual conditions and outcomes.
+                                                        </p>
+                                                        <div class="decision-sim" style="filter: grayscale(80%); opacity: 0.7;">
                                                             <svg class="arch-connections">
                                                                 <line x1="170" y1="25" x2="70" y2="85" class="active"></line>
                                                                 <line x1="170" y1="25" x2="260" y2="85" class="active"></line>
@@ -760,7 +867,7 @@
         <div class="help-modal-overlay"></div>
         <div class="help-modal-content">
             <div class="help-modal-header">
-                <h2>Doc Visual Intelligence - User Guide</h2>
+                <h2>Doc Visual Advisor - User Guide</h2>
                 <button type="button" id="closeHelpBtn" class="close-help-btn" title="Close guide">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -832,10 +939,38 @@
                             <li><strong>Visual Type</strong> - What to create (Screenshot, Flowchart, etc.)</li>
                             <li><strong>Reader Benefit</strong> - Why this visual helps readers</li>
                             <li><strong>Reader Value (1-5)</strong> - How much effort it saves readers</li>
-                            <li><strong>Confidence %</strong> - How strongly the detection rules matched this section</li>
+                            <li><strong>Placement confidence</strong> - How strongly the placement rule matched this section</li>
+                            <li><strong>Content generation confidence</strong> - How reliable auto-generated visual content is for this section</li>
                             <li><strong>Priority</strong> - High, Medium, Low importance</li>
                             <li><strong>Recommended Placement</strong> - Where in the text to add it</li>
                         </ul>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <h3>📚 Rule Glossary</h3>
+                    <p>The rule trace shows a plain-English rule name first, then the internal ID in smaller text for cross-referencing. These are the current rules used by the engine.</p>
+                    <div style="display:grid; gap:0.75rem;">
+                        {% for rule in rule_catalog %}
+                        <div class="help-visual-item" style="text-align:left; padding:0.9rem 1rem;">
+                            <div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:flex-start;">
+                                <div>
+                                    <h4 style="margin:0;">{{ rule.display_name }}</h4>
+                                    <div style="font-size:0.74rem; color:var(--text-muted); margin-top:0.15rem;">{{ rule.id }} · {{ rule.source_label }}</div>
+                                </div>
+                                <span class="status">{{ rule.visual_type }}</span>
+                            </div>
+                            <p style="margin:0.45rem 0 0;">{{ rule.trigger_summary }}</p>
+                            <p style="margin:0.4rem 0 0; font-size:0.82rem; color:var(--text-muted);">{{ rule.description }}{% if rule.reader_question and rule.reader_question != '—' %} Reader question: {{ rule.reader_question }}.{% endif %}</p>
+                            {% if rule.trigger_criteria %}
+                            <ul style="margin:0.45rem 0 0; padding-left:1.1rem; font-size:0.8rem; color:var(--text-muted);">
+                                {% for criterion in rule.trigger_criteria %}
+                                <li style="margin:0.1rem 0;">{{ criterion }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
 
@@ -861,7 +996,7 @@
                         <div class="help-visual-item">
                             <div class="help-visual-icon">🌳</div>
                             <h4>Decision Tree</h4>
-                            <p>Visualize logical choices and outcomes</p>
+                            <p>Visualize logical choices and outcomes — author manually from the placement recommendation</p>
                         </div>
                         <div class="help-visual-item">
                             <div class="help-visual-icon">📝</div>
@@ -883,7 +1018,11 @@
                         <h4>Feedback</h4>
                         <ul class="help-list">
                             <li>Rate recommendations: <strong>"Was this useful?"</strong> with 👍 Yes or 👎 No</li>
-                            <li>Your feedback helps improve rule accuracy for future analyses</li>
+                            {% if privacy and privacy.privacy_mode %}
+                            <li>Privacy Mode: feedback retention is disabled by default</li>
+                            {% else %}
+                            <li>Your feedback is logged for rule review and quality tracking</li>
+                            {% endif %}
                         </ul>
                     </div>
                     <div class="help-subsection">
@@ -891,7 +1030,7 @@
                         <ul class="help-list">
                             <li>Click <strong>"Advanced Details"</strong> to see signal analysis</li>
                             <li>View which rules triggered this recommendation and why</li>
-                            <li>See confidence scores and detected content type</li>
+                            <li>See placement confidence, generation confidence, and detected content type</li>
                         </ul>
                     </div>
                     <div class="help-subsection">
@@ -900,7 +1039,7 @@
                             <li>Screenshot recommendations include a <strong>"Capture Specification"</strong> checklist</li>
                             <li>Use Purpose, Include, Primary Focus, and Exclude fields to align screenshots across pages</li>
                             <li>Copy insertion snippets to add placeholders to your document</li>
-                            <li>The tool can generate Mermaid diagram code automatically from detected content</li>
+                            <li>Auto-generated content is shown only when generation confidence is strong</li>
                         </ul>
                     </div>
                 </div>
@@ -938,8 +1077,12 @@
                         <p>Some sections may be best as pure text (for example, summaries or disclaimers). The tool respects this and returns no recommendation</p>
                     </div>
                     <div class="help-faq-item">
-                        <h4>What does confidence % mean?</h4>
-                        <p>Higher % = more detection rules matched this section. 80%+ is a strong match</p>
+                        <h4>What do the confidence tiers mean?</h4>
+                        <p>Placement confidence estimates where a visual should go. Generation confidence estimates whether auto-generated visual content is trustworthy enough to use as a draft.</p>
+                    </div>
+                    <div class="help-faq-item">
+                        <h4>What does a rule name like PR_WORKFLOW mean?</h4>
+                        <p>The trace now shows the human-readable rule name first, for example "Multi-Step Workflow Rule," and keeps the internal ID in smaller text underneath for cross-reference. Open "See rule definition" in the trace or review the Rule Glossary in this guide to see what the rule checks for.</p>
                     </div>
                     <div class="help-faq-item">
                         <h4>Can I regenerate the analysis?</h4>
@@ -951,7 +1094,7 @@
                 <div class="help-section help-section-last">
                     <h3>📞 Need More Help?</h3>
                     <p>This tool uses rule-based detection to identify opportunities for visual aids. Results are suggestions—always review before making changes to your documents.</p>
-                    <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">Created to help technical writers enhance documentation with strategic visual aids.</p>
+                    <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">Created to help technical writers enhance documentation with strategic visual placement and review-ready drafts.</p>
                 </div>
             </div>
         </div>

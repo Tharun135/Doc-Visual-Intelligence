@@ -1,7 +1,14 @@
 [
     {
         "id": "VR006",
+        "display_name": "File Transfer Workflow Rule",
         "description": "File transfer workflow — import/export sequences that don't hit the step threshold",
+        "trigger_summary": "Fires when the section mentions import or export actions that imply a repeatable file-transfer workflow.",
+        "trigger_criteria": [
+            "keyword match: 'import file', 'export file', 'upload file', 'download file', 'import tags', 'export tags'",
+            "min_keyword_hits: 1",
+            "content_type must be Procedure"
+        ],
         "keywords": [
             "import file",
             "export file",
@@ -21,7 +28,15 @@
     },
     {
         "id": "VR013",
+        "display_name": "Field Mapping Rule",
         "description": "Source-to-target mapping tables for field or tag configuration",
+        "trigger_summary": "Fires when the section describes source-to-target field mappings, data types, or tag mapping vocabulary.",
+        "trigger_criteria": [
+            "keyword match: 'mapping', 'source field', 'target field', 'datatype', 'data type', 'field mapping'",
+            "min_keyword_hits: 2",
+            "min_words: 20",
+            "content_type must be Reference or Procedure"
+        ],
         "keywords": [
             "mapping",
             "source field",
@@ -43,7 +58,14 @@
     },
     {
         "id": "VR005",
+        "display_name": "Physical Setup Illustration Rule",
         "description": "Physical hardware setup — mounting, cabling, power",
+        "trigger_summary": "Fires when the section describes physical installation tasks such as mounting, cabling, or power wiring.",
+        "trigger_criteria": [
+            "keyword match: 'connect cable', 'mount device', 'power supply', 'din rail', 'wiring'",
+            "min_keyword_hits: 1",
+            "content_type must be Procedure"
+        ],
         "keywords": [
             "connect cable",
             "mount device",
@@ -62,7 +84,16 @@
     },
     {
         "id": "VR007",
+        "display_name": "Structured Configuration Example Rule",
         "description": "Structured config examples — JSON, YAML, XML blocks",
+        "trigger_summary": "Fires when the section contains code-like configuration content such as JSON, YAML, or XML examples.",
+        "trigger_criteria": [
+            "keyword match: 'json payload', 'yaml config', 'xml schema', 'sample payload', 'example config'",
+            "min_keyword_hits: 1",
+            "min_words: 80",
+            "requires a fenced code block or 3+ indented lines to be present",
+            "content_type must be Reference or Concept"
+        ],
         "keywords": [
             "json payload",
             "yaml config",

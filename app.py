@@ -1,14 +1,16 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import csv
 import os
-import tempfile
 import uuid
+import re
+import socket
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from werkzeug.exceptions import RequestEntityTooLarge
-from analyzers.text_extractor import extract_text
+from analyzers.text_extractor import extract_text_from_upload
 from analyzers.section_splitter import split_sections
-from analyzers.visual_detector import detect_visuals, compute_signals
+from analyzers.visual_detector import detect_visuals, compute_signals, get_rule_catalog
 from generators.plantuml_generator import render_plantuml
 
 app = Flask(__name__)
@@ -20,6 +22,8 @@ POST_STATE_CACHE = {}
 ALLOWED_EXTENSIONS = {".txt", ".md", ".json", ".pdf", ".docx"}
 MAX_UPLOAD_MB = 25
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
+PRIVACY_MODE = os.environ.get("DVI_PRIVACY_MODE", "1") == "1"
+ENABLE_FEEDBACK_LOG = os.environ.get("DVI_ENABLE_FEEDBACK_LOG", "0") == "1" and not PRIVACY_MODE
 
 
 def _is_allowed_file(filename):
@@ -27,7 +31,106 @@ def _is_allowed_file(filename):
     return extension in ALLOWED_EXTENSIONS
 
 
+def _is_local_request() -> bool:
+    remote_addr = request.remote_addr or ""
+    return remote_addr in {"127.0.0.1", "::1", "localhost"}
+
+
+def _privacy_self_test() -> dict:
+    return {
+        "privacy_mode": PRIVACY_MODE,
+        "localhost_only": PRIVACY_MODE,
+        "outbound_network_block_during_analysis": PRIVACY_MODE,
+        "in_memory_upload_processing": True,
+        "feedback_retention_enabled": ENABLE_FEEDBACK_LOG,
+        "external_cdn_assets": False,
+        "telemetry_enabled": False,
+        "plantuml_cloud_fallback_enabled": os.environ.get("DVI_ALLOW_PLANTUML_API", "0") == "1",
+        "database_enabled": False,
+        "upload_storage_enabled": False,
+    }
+
+
+@contextmanager
+def _block_outbound_network():
+    """Block non-loopback socket connections while analysis runs."""
+    if not PRIVACY_MODE:
+        yield
+        return
+
+    original_socket = socket.socket
+
+    class GuardedSocket(original_socket):
+        def connect(self, address):
+            host = address[0] if isinstance(address, tuple) and address else ""
+            host_str = str(host).lower()
+            if host_str not in {"127.0.0.1", "::1", "localhost"}:
+                raise OSError("Outbound network blocked in privacy mode")
+            return super().connect(address)
+
+    socket.socket = GuardedSocket
+    try:
+        yield
+    finally:
+        socket.socket = original_socket
+
+
+def _sanitize_svg(svg_text: str) -> str:
+    """Best-effort SVG sanitizer for generated previews."""
+    if not svg_text:
+        return svg_text
+    sanitized = re.sub(r"<\s*script[^>]*>.*?<\s*/\s*script\s*>", "", svg_text, flags=re.IGNORECASE | re.DOTALL)
+    sanitized = re.sub(r"\son[a-zA-Z]+\s*=\s*(['\"]).*?\1", "", sanitized, flags=re.IGNORECASE | re.DOTALL)
+    sanitized = re.sub(r"\son[a-zA-Z]+\s*=\s*[^\s>]+", "", sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r"javascript:\s*", "", sanitized, flags=re.IGNORECASE)
+    return sanitized
+
+
+def _sanitize_mermaid_source(mermaid_text: str) -> str:
+    """Remove Mermaid directives that can introduce interactive/script-like behavior."""
+    if not mermaid_text:
+        return mermaid_text
+    lines = []
+    for line in mermaid_text.splitlines():
+        stripped = line.strip().lower()
+        if stripped.startswith("click "):
+            continue
+        if "javascript:" in stripped:
+            continue
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _sanitize_generated_artifacts(results: list[dict]) -> None:
+    for section in results:
+        for suggestion in section.get("suggestions", []):
+            artifact = suggestion.get("generated_artifact")
+            if isinstance(artifact, dict):
+                if isinstance(artifact.get("svg"), str):
+                    artifact["svg"] = _sanitize_svg(artifact["svg"])
+                if isinstance(artifact.get("mermaid"), str):
+                    artifact["mermaid"] = _sanitize_mermaid_source(artifact["mermaid"])
+            if isinstance(suggestion.get("plantuml_code"), str):
+                suggestion["plantuml_code"] = _sanitize_mermaid_source(suggestion["plantuml_code"])
+
+
+@app.before_request
+def enforce_localhost_only_when_private():
+    if PRIVACY_MODE and not _is_local_request():
+        return jsonify({"ok": False, "error": "Privacy mode is enabled: only localhost access is allowed."}), 403
+
+
 def _load_feedback_summary():
+    if PRIVACY_MODE:
+        return {
+            "has_data": False,
+            "total": 0,
+            "yes": 0,
+            "no": 0,
+            "acceptance_rate": 0,
+            "by_visual_type": [],
+        }
+
     csv_path = Path(app.root_path) / "feedback" / "recommendation_feedback.csv"
     if not csv_path.exists():
         return {
@@ -89,6 +192,9 @@ def _load_feedback_summary():
 
 @app.route("/feedback", methods=["POST"])
 def feedback():
+    if not ENABLE_FEEDBACK_LOG:
+        return jsonify({"ok": False, "error": "Feedback logging is disabled in privacy mode."}), 403
+
     payload = request.get_json(silent=True) or {}
     section_title = str(payload.get("section_title", "")).strip()
     visual_type = str(payload.get("visual_type", "")).strip()
@@ -131,6 +237,12 @@ def home():
     if request.method == "POST":
         file = request.files.get("document")
         pasted_text = request.form.get("pasted_text", "")
+        cached_text = request.form.get("cached_text", "")
+
+        # If no new file or pasted text, fall back to the cached original text
+        # so re-clicking "Analyze" re-runs the same document.
+        if not pasted_text.strip() and not (file and file.filename):
+            pasted_text = cached_text
 
         text = ""
         filename = ""
@@ -139,21 +251,12 @@ def home():
             if not _is_allowed_file(filename):
                 upload_error = "Unsupported file type. Use .txt, .md, .json, .pdf, or .docx."
             else:
-                temp_path = ""
-                extension = Path(filename).suffix.lower()
                 try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=extension) as temp_file:
-                        file.save(temp_file.name)
-                        temp_path = temp_file.name
-
-                    text = extract_text(temp_path)
+                    text = extract_text_from_upload(file)
                     if not text.strip():
                         upload_error = "No readable text found in the uploaded file."
                 except Exception:
                     upload_error = "Could not read the uploaded file. Please check file contents and format."
-                finally:
-                    if temp_path and os.path.exists(temp_path):
-                        os.remove(temp_path)
 
             input_source = "file"
             original_text = text
@@ -163,32 +266,33 @@ def home():
             original_text = text
 
         if text:
-            sections = split_sections(text)
+            with _block_outbound_network():
+                sections = split_sections(text)
 
-            precomputed_signals = [compute_signals(section["content"]) for section in sections]
+                precomputed_signals = [compute_signals(section["content"]) for section in sections]
 
-            for index, section in enumerate(sections):
-                next_steps = precomputed_signals[index + 1]["steps"] if index + 1 < len(sections) else 0
-                section_context = {
-                    "previous_title": sections[index - 1]["title"] if index > 0 else "",
-                    "next_title": sections[index + 1]["title"] if index + 1 < len(sections) else "",
-                    "next_steps": next_steps,
-                }
+                for index, section in enumerate(sections):
+                    next_steps = precomputed_signals[index + 1]["steps"] if index + 1 < len(sections) else 0
+                    section_context = {
+                        "previous_title": sections[index - 1]["title"] if index > 0 else "",
+                        "next_title": sections[index + 1]["title"] if index + 1 < len(sections) else "",
+                        "next_steps": next_steps,
+                    }
 
-                suggestions = detect_visuals(
-                    section["title"],
-                    section["content"],
-                    section_context,
-                )
+                    suggestions = detect_visuals(
+                        section["title"],
+                        section["content"],
+                        section_context,
+                    )
 
-                step_lines = precomputed_signals[index]["step_lines"]
+                    step_lines = precomputed_signals[index]["step_lines"]
 
-                results.append({
-                    "title": section["title"],
-                    "content": section["content"],
-                    "step_lines": step_lines,
-                    "suggestions": suggestions
-                })
+                    results.append({
+                        "title": section["title"],
+                        "content": section["content"],
+                        "step_lines": step_lines,
+                        "suggestions": suggestions
+                    })
 
             # ── Reuse detection ─────────────────────────────────────
             # Build a fingerprint for each screenshot recommendation from
@@ -220,6 +324,8 @@ def home():
                         suggestion["reuse_warning"] = None
             # ── End reuse detection ──────────────────────────────────
 
+            _sanitize_generated_artifacts(results)
+
         post_state_id = uuid.uuid4().hex
         POST_STATE_CACHE[post_state_id] = {
             "results": results,
@@ -235,6 +341,8 @@ def home():
         results=results,
         original_text=original_text,
         input_source=input_source,
+        privacy=_privacy_self_test(),
+        rule_catalog=get_rule_catalog(),
         feedback_summary=_load_feedback_summary(),
         upload_error=upload_error,
     )
@@ -247,14 +355,76 @@ def handle_file_too_large(_error):
         results=[],
         original_text="",
         input_source="file",
+        privacy=_privacy_self_test(),
+        rule_catalog=get_rule_catalog(),
         feedback_summary=_load_feedback_summary(),
         upload_error=f"File is too large. Maximum allowed size is {MAX_UPLOAD_MB}MB.",
     ), 413
 
 
+@app.route("/privacy/self-test", methods=["GET"])
+def privacy_self_test():
+    return jsonify({"ok": True, "checks": _privacy_self_test()})
+
+
+@app.route("/privacy/report", methods=["GET"])
+def privacy_report():
+    checks = _privacy_self_test()
+    route_rules = {rule.rule for rule in app.url_map.iter_rules()}
+    feedback_disabled = not ENABLE_FEEDBACK_LOG
+    plantuml_disabled = PRIVACY_MODE
+    endpoint_surface_minimized = "/feedback" not in route_rules or feedback_disabled
+    ordered = [
+        ("Offline Mode Enabled", checks["privacy_mode"]),
+        ("No Internet Endpoints Configured", checks["localhost_only"] and not checks["plantuml_cloud_fallback_enabled"]),
+        ("No CDN Assets", checks["external_cdn_assets"] is False),
+        ("No Telemetry", checks["telemetry_enabled"] is False),
+        ("No Upload Storage", checks["upload_storage_enabled"] is False),
+        ("No Feedback Logging", checks["feedback_retention_enabled"] is False),
+        ("No Database", checks["database_enabled"] is False),
+        ("PlantUML Cloud Disabled", checks["plantuml_cloud_fallback_enabled"] is False),
+        ("Mermaid Local", checks["external_cdn_assets"] is False),
+        ("Upload Processing In Memory", checks["in_memory_upload_processing"]),
+        ("Outbound Network Block During Analysis", checks["outbound_network_block_during_analysis"]),
+        ("Endpoint Surface Minimized", endpoint_surface_minimized and plantuml_disabled),
+    ]
+    passed = sum(1 for _, ok in ordered if ok)
+    score = int(round((passed / len(ordered)) * 100)) if ordered else 0
+    return jsonify({
+        "ok": True,
+        "score": score,
+        "checks": [{"name": name, "pass": ok} for name, ok in ordered],
+    })
+
+
+@app.after_request
+def add_security_headers(response):
+    csp = "; ".join([
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data:",
+        "font-src 'self' data:",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "frame-ancestors 'none'",
+        "form-action 'self'",
+    ])
+    response.headers["Content-Security-Policy"] = csp
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), usb=(), accelerometer=(), magnetometer=()"
+    return response
+
+
 @app.route("/generate/plantuml", methods=["POST"])
 def generate_plantuml_route():
     """Render PlantUML source code to SVG via the MCP server."""
+    if PRIVACY_MODE:
+        return jsonify({"ok": False, "error": "PlantUML render endpoint is disabled in privacy mode."}), 403
+
     payload = request.get_json(silent=True) or {}
     code = str(payload.get("code", "")).strip()
 

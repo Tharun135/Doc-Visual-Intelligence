@@ -98,9 +98,12 @@ class RuleResult:
 @dataclass
 class Rule:
     id: str
+    display_name: str
     reader_question: str
     visual_type: str
     description: str
+    trigger_summary: str
+    trigger_criteria: list  # Plain-English gate conditions (e.g. 'steps ≥ 4', 'ui_density ≥ 2.0')
     match: Callable         # (signals: dict) -> Optional[RuleResult]
 
 
@@ -230,9 +233,16 @@ def _match_pr_connections(signals: dict) -> Optional[RuleResult]:
 
 PR_CONNECTIONS = Rule(
     id="PR_CONNECTIONS",
+    display_name="System Relationships Rule",
     reader_question="How are components related?",
     visual_type="Architecture / Topology / Data Flow Diagram",
     description="Overview and topology sections describing relationships between system components.",
+    trigger_summary="Fires when the section describes explicit relationships or data movement between components.",
+    trigger_criteria=[
+        "relationship_count ≥ 1 (at least one explicit A→B sentence)",
+        "blocked if steps ≥ 5 and relationship_count < 2 (procedural sections don't qualify)",
+        "data_flow_verbs ≥ 2 → Data Flow Diagram; has_network_nouns + rel ≥ 2 → Topology Diagram; else → Architecture Diagram",
+    ],
     match=_match_pr_connections,
 )
 
@@ -323,9 +333,16 @@ def _match_pr_screenshot(signals: dict) -> Optional[RuleResult]:
 
 PR_SCREENSHOT = Rule(
     id="PR_SCREENSHOT",
+    display_name="UI Navigation Rule",
     reader_question="Where do I click?",
     visual_type="Screenshot / GIF Tutorial",
     description="UI navigation sequences where readers need to see the interface state.",
+    trigger_summary="Fires when the section contains dense, step-by-step UI actions that readers should see on screen.",
+    trigger_criteria=[
+        "ui_density ≥ 2.0 (at least 2 UI actions per 100 words)",
+        "steps ≥ 2 OR ui_action_sentences ≥ 3",
+        "escalates to GIF Tutorial when steps ≥ 5 and ui_density ≥ 3.0",
+    ],
     match=_match_pr_screenshot,
 )
 
@@ -407,9 +424,16 @@ def _match_pr_workflow(signals: dict) -> Optional[RuleResult]:
 
 PR_WORKFLOW = Rule(
     id="PR_WORKFLOW",
+    display_name="Multi-Step Workflow Rule",
     reader_question="What happens next?",
     visual_type="Workflow Diagram",
     description="Multi-step procedures where sequence and completeness matter to the reader.",
+    trigger_summary="Fires when 4 or more sequential procedure steps are detected and the reader needs the full sequence.",
+    trigger_criteria=[
+        "steps ≥ 4 (numbered or bulleted procedural steps)",
+        "priority upgrades to High when steps ≥ 7 or warnings ≥ 1",
+        "complexity_score ≥ 8 adds a bonus (nested or parallel steps detected)",
+    ],
     match=_match_pr_workflow,
 )
 
@@ -509,9 +533,16 @@ def _match_pr_decision(signals: dict) -> Optional[RuleResult]:
 
 PR_DECISION = Rule(
     id="PR_DECISION",
+    display_name="Branching Decision Rule",
     reader_question="Which option should I choose?",
     visual_type="Decision Tree",
     description="Branching logic or option comparisons where readers must choose a path.",
+    trigger_summary="Fires when the section contains real reader choices, such as if/else branches or named option comparisons.",
+    trigger_criteria=[
+        "conditional_branches ≥ 2 OR named option comparison detected",
+        "blocked when branches ≥ 2 but all are validation gates (e.g. 'if successful, continue') and no choice vocabulary present",
+        "escalates to Comparison Table when options are contrasted but no if/else branches are found",
+    ],
     match=_match_pr_decision,
 )
 
